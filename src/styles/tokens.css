@@ -1,0 +1,35 @@
+/* Дизайн-система: кольори, типографіка, тривалості, радіуси. Єдине джерело стилів для всіх компонентів. */
+:root {
+  --bg: #070d1a;
+  --bg2: #0b1426;
+  --panel: #111c33;
+  --panel2: #18274a;
+  --line: rgba(255, 255, 255, 0.09);
+  --text: #eef3fb;
+  --muted: #94a5c2;
+  --gold: #f5c542;
+  --green: #2fbf71;
+  --red: #ef4b5a;
+  --blue: #3d8bfd;
+  --pitch: #2a8540;
+
+  /* рідкісність (дублює data/rarity.ts для CSS-ефектів) */
+  --r-divine: #f5c542;
+  --r-mythic: #914cff;
+  --r-legendary: #f28c28;
+  --r-epic: #347de0;
+  --r-rare: #28b884;
+  --r-common: #9aa7b5;
+
+  --font-head: 'Unbounded', 'Segoe UI', system-ui, sans-serif;
+  --font-body: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+
+  --radius: 14px;
+  --radius-sm: 9px;
+  --t-fast: 0.15s;
+  --t-med: 0.3s;
+  --t-slow: 0.7s;
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-t: env(safe-area-inset-top, 0px);
+}

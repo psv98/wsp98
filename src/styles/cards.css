@@ -1,0 +1,53 @@
+/* Єдина компонентна система карток: один шаблон, колір і ефекти задаються змінною --rc. */
+.pcard { --rc: var(--r-common); position: relative; width: min(250px, 78vw); border-radius: 18px; padding: 3px; background: linear-gradient(160deg, var(--rc), color-mix(in srgb, var(--rc) 35%, #000) 55%, var(--rc)); box-shadow: 0 0 34px color-mix(in srgb, var(--rc) 55%, transparent), 0 14px 30px rgba(0, 0, 0, 0.5); flex: none; }
+.pcard .in { position: relative; border-radius: 15px; padding: 14px 12px 12px; background: radial-gradient(circle at 50% 18%, color-mix(in srgb, var(--rc) 34%, #101a30), #0b1324 72%); display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; overflow: hidden; min-height: 100%; }
+.pcard .in::before { content: ''; position: absolute; inset: 0; background: linear-gradient(115deg, transparent 40%, rgba(255, 255, 255, 0.16) 50%, transparent 60%); transform: translateX(-100%); animation: sheen 3.4s ease-in-out infinite; pointer-events: none; }
+@keyframes sheen { 60%, 100% { transform: translateX(100%); } }
+.pcard .rar { display: flex; align-items: center; gap: 6px; font-family: var(--font-head); font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--rc); }
+.pcard .rar svg { width: 22px; height: 22px; filter: drop-shadow(0 0 6px var(--rc)); }
+.pcard .port { width: 96px; height: 96px; border-radius: 50%; border: 4px solid var(--rc); background: #fff; overflow: hidden; box-shadow: 0 0 22px color-mix(in srgb, var(--rc) 70%, transparent); margin: 4px 0; }
+.pcard .port img { width: 100%; height: 100%; object-fit: cover; }
+.pcard .pname { font-family: var(--font-head); font-size: 15px; line-height: 1.15; }
+.pcard .ptitle { font-size: 12.5px; font-weight: 700; color: var(--rc); }
+.pcard .prole { font-size: 11.5px; color: var(--muted); }
+.pcard .pab { font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 99px; background: color-mix(in srgb, var(--rc) 22%, transparent); border: 1px solid color-mix(in srgb, var(--rc) 55%, transparent); }
+.pcard ul { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 3px; font-size: 11.5px; text-align: left; width: 100%; }
+.pcard li { padding-left: 14px; position: relative; color: #d6e0f0; }
+.pcard li::before { content: ''; position: absolute; left: 2px; top: 0.5em; width: 6px; height: 6px; border-radius: 50%; background: var(--rc); }
+.pcard .q { position: absolute; top: 46px; right: 14px; font-family: var(--font-head); font-size: 18px; color: var(--rc); }
+.pcard .price { margin-top: 6px; }
+.pcard.compact { width: 100%; }
+.pcard.compact .port { width: 64px; height: 64px; }
+.pcard.locked { filter: grayscale(0.9) brightness(0.6); }
+.pcard.elsewhere .in::after { content: attr(data-note); position: absolute; left: 0; right: 0; bottom: 0; padding: 4px; font-size: 10.5px; font-weight: 700; background: rgba(0, 0, 0, 0.72); color: #ffb3bb; }
+.pcard.jackpot { --rc: #ffd95e; }
+.pcard.jackpot .amount { font-family: var(--font-head); font-size: 26px; color: #ffd95e; text-shadow: 0 0 18px rgba(255, 217, 94, 0.7); }
+.cardgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 14px; justify-items: center; }
+.cardgrid .pcard { width: 100%; max-width: 250px; }
+
+/* ---------- кінематографічне відкриття ---------- */
+.reveal { position: fixed; inset: 0; z-index: 200; background: #02040a; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 16px 12px calc(16px + var(--safe-b)); overflow: hidden auto; --rc: #fff; animation: fade 0.5s; }
+.reveal .spot { position: absolute; top: -20%; width: 46vmax; height: 150vmax; transform-origin: 50% 0; background: linear-gradient(180deg, color-mix(in srgb, var(--rc) 45%, transparent), transparent 60%); clip-path: polygon(47% 0, 53% 0, 100% 100%, 0 100%); mix-blend-mode: screen; pointer-events: none; animation: sweep 2.2s ease-in-out infinite alternate; opacity: 0.8; }
+.reveal .spot.s1 { left: -12%; --a: 10deg; --b: 30deg; } .reveal .spot.s2 { right: -12%; --a: -10deg; --b: -30deg; }
+.reveal .head { position: relative; z-index: 2; font-family: var(--font-head); font-size: clamp(14px, 3.6vw, 26px); text-align: center; color: var(--rc); text-shadow: 0 0 22px var(--rc); animation: headIn 0.7s both; max-width: 900px; }
+.reveal .sub { position: relative; z-index: 2; text-align: center; color: var(--muted); font-size: 13.5px; max-width: 620px; animation: fade 1s both; }
+@keyframes headIn { from { opacity: 0; letter-spacing: 0.4em; transform: scale(1.3); } }
+.reveal .stage { position: relative; z-index: 2; display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; align-items: stretch; perspective: 1200px; }
+.reveal .back { width: min(230px, 62vw); aspect-ratio: 0.7; border-radius: 18px; background: repeating-linear-gradient(45deg, #101a30 0 12px, #16233f 12px 24px); border: 3px solid #fff; display: grid; place-items: center; animation: shake 0.18s linear infinite, glowPulse 0.9s ease-in-out infinite alternate; font-family: var(--font-head); font-size: 62px; color: #fff; }
+@keyframes shake { 25% { transform: translate(2px, -1px) rotate(0.6deg); } 75% { transform: translate(-2px, 1px) rotate(-0.6deg); } }
+@keyframes glowPulse { from { box-shadow: 0 0 20px rgba(255, 255, 255, 0.3); } to { box-shadow: 0 0 80px rgba(255, 255, 255, 0.9); } }
+.reveal .flip { animation: flipIn 0.9s cubic-bezier(0.2, 0.9, 0.3, 1.2) both; }
+@keyframes flipIn { from { opacity: 0; transform: rotateY(90deg) scale(0.7); } }
+.reveal .flip .rar { animation: stepIn 0.5s 0.5s both; } .reveal .flip .port { animation: stepIn 0.5s 0.75s both; }
+.reveal .flip .pname { animation: stepIn 0.5s 1.05s both; } .reveal .flip .ptitle, .reveal .flip .prole { animation: stepIn 0.5s 1.3s both; }
+.reveal .flip .pab, .reveal .flip ul { animation: stepIn 0.5s 1.6s both; }
+@keyframes stepIn { from { opacity: 0; transform: translateY(10px) scale(0.9); } }
+.reveal .acts { position: relative; z-index: 2; display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; animation: fade 0.6s 1.9s both; }
+.reveal .skip { position: absolute; top: calc(10px + var(--safe-t)); right: 10px; z-index: 5; }
+.reveal .parts { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.reveal .parts i { position: absolute; bottom: -10px; width: 6px; height: 6px; border-radius: 50%; background: var(--rc); box-shadow: 0 0 8px var(--rc); animation: rise linear infinite; opacity: 0.85; }
+@keyframes rise { to { transform: translateY(-110vh) translateX(var(--dx, 0)); opacity: 0; } }
+.reveal.mythic .parts i { border-radius: 50% 50% 50% 0; transform: rotate(-45deg); width: 9px; height: 9px; }
+.reveal.divine .back, .reveal.divine .pcard { animation-name: flipIn, divineGlow; animation-duration: 0.9s, 2s; animation-iteration-count: 1, infinite; animation-direction: normal, alternate; }
+@keyframes divineGlow { to { box-shadow: 0 0 90px rgba(245, 197, 66, 0.95), 0 0 160px rgba(245, 197, 66, 0.4); } }
+.lowgfx .reveal .parts, .lowgfx .reveal .spot { display: none; }
