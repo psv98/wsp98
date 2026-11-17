@@ -114,7 +114,7 @@ export function MatchScreen() {
 
   useEffect(() => {
     const canvas = canvasRef.current!, box = boxRef.current!;
-    const stars = engine.players.filter((p) => p.sp && p.sp.kind === 'star').map((p) => p.sp!.img);
+    const stars = engine.players.filter((p) => p.sp && p.sp.kind !== 'imi').map((p) => p.sp!.img);
     stars.push('assets/imi/imi-user.png', 'assets/imi/imi-opp.png');
     const rend = new PitchRenderer(canvas, [{ logo: CLUB_BY_ID[fx.home].logo, color: colors[0], isUser: userTeam === 0 }, { logo: CLUB_BY_ID[fx.away].logo, color: colors[1], isUser: userTeam === 1 }], stars);
     rend.low = settings.lowGfx;
@@ -136,6 +136,7 @@ export function MatchScreen() {
       }
       if (e.type === 'goal' || e.type === 'ownGoal') rend.goalFlash(colors[e.team as 0 | 1]);
       if (e.type === 'golden' || e.type === 'storm' || e.type === 'lastAttack' || e.type === 'var') audio.sfx('special');
+      if (e.type === 'goal' && e.text === 'scissors') audio.sfx('scissorsGoal');
       if (e.type === 'miss') audio.sfx('groan');
     };
     const loop = (now: number) => {

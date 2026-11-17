@@ -195,9 +195,10 @@ describe('мегатрансфери', () => {
     expect(rollCard(own, rng)).toEqual({ kind: 'unit', unitId: 'oksana' });
   });
 
-  it('всі 14 персонажів ІМІ присутні в пулі', () => {
+  it('14 персонажів ІМІ та Катаріна Матернова присутні в пулі мегатрансферів', () => {
     expect(IMI_SPECIALS).toHaveLength(14);
-    expect(new Set(TRANSFER_UNITS.flatMap((u) => u.members)).size).toBe(14);
+    expect(new Set(TRANSFER_UNITS.flatMap((u) => u.members)).size).toBe(15);
+    expect(TRANSFER_UNITS.some((u) => u.id === 'katarina-mathernova')).toBe(true);
   });
 });
 

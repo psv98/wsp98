@@ -103,6 +103,14 @@ class AudioSystem {
       case 'reveal-mythic': [220, 277, 330, 440, 554, 660].forEach((f, i) => this.tone(f, t + i * 0.08, 1.3, 'sawtooth', 0.11, S)); this.tone(55, t, 1.6, 'sine', 0.6, S); this.burst(t, 1.6, 0.3, 1200, 0.4, S, 'bandpass', true); break;
       case 'reveal-divine': [262, 330, 392, 523, 659, 784, 1047].forEach((f, i) => { this.tone(f, t + i * 0.11, 2.2, 'triangle', 0.16, S); this.tone(f * 2, t + i * 0.11 + 0.05, 1.6, 'sine', 0.06, S); }); this.burst(t + 0.6, 2.5, 0.25, 7000, 0.3, S, 'highpass', true); break;
       case 'alert': [330, 330, 440].forEach((f, i) => this.tone(f, t + i * 0.16, 0.14, 'square', 0.16, S)); this.tone(110, t, 0.6, 'sawtooth', 0.2, S); break;
+      case 'scissors': // свист повітря та підйом — акробатичний удар
+        this.burst(t, 0.45, 0.4, 2600, 1.4, S, 'bandpass', true); this.tone(420, t, 0.35, 'sine', 0.25, S, 1250); this.tone(170, t + 0.3, 0.12, 'sine', 0.6, S, 50);
+        this.burst(t + 0.2, 1.4, 0.6, 900, 0.5, C, 'bandpass', true);
+        break;
+      case 'scissorsGoal': // особливе святкування трибун
+        [523, 659, 784, 1047, 1319].forEach((f, i) => this.tone(f, t + 0.15 + i * 0.08, 0.7, 'triangle', 0.16, S));
+        this.burst(t, 4.2, 1.0, 1300, 0.35, C, 'bandpass', true);
+        break;
       case 'special': [660, 880, 1320].forEach((f, i) => this.tone(f, t + i * 0.07, 0.35, 'triangle', 0.18, S)); break;
     }
   }

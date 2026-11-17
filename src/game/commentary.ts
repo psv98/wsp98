@@ -12,7 +12,8 @@ export function eventLine(e: MatchEvent, clubs: [string, string]): Line | null {
   const p = person(who, e.special);
   switch (e.type) {
     case 'kickoff': return null;
-    case 'goal': return { text: `ГОЛ! ${who}. ${club}${e.text === 'pen' ? ' · з пенальті' : e.text === 'head' ? ' · головою' : ''}${e.name2 ? ` · асист: ${e.name2}` : ''}`, tone: 'goal', big: true };
+    case 'goal': if (e.text === 'scissors') return { text: `НЕЙМОВІРНИЙ ГОЛ! ${who.toUpperCase()} ЗАБИВАЄ НОЖИЦЯМИ!${e.name2 ? ` Асист: ${e.name2}` : ''}`, tone: 'goal', big: true };
+      return { text: `ГОЛ! ${who}. ${club}${e.text === 'pen' ? ' · з пенальті' : e.text === 'head' ? ' · головою' : ''}${e.name2 ? ` · асист: ${e.name2}` : ''}`, tone: 'goal', big: true };
     case 'ownGoal': return { text: `Автогол! ${who} зрізає мʼяч у власні ворота — гол на користь «${club}»`, tone: 'goal', big: true };
     case 'save': return { text: `Сейв! ${who} відбиває удар${e.name2 ? ` (${e.name2})` : ''}`, tone: 'info' };
     case 'miss': return { text: `${who} бʼє повз ворота`, tone: 'info' };
@@ -31,6 +32,7 @@ export function eventLine(e: MatchEvent, clubs: [string, string]): Line | null {
     case 'fulltime': return { text: 'Фінальний свисток!', tone: 'info' };
     case 'golden': return { text: `«Золота хвилина»! «${club}» йде у навалу`, tone: 'special', big: true };
     case 'lastAttack': return { text: `«Остання атака»! «${club}» має шанс`, tone: 'special', big: true };
+    case 'scissors': return { text: `«Європейські ножиці»! ${who} бʼє через себе!`, tone: 'special', big: true };
     case 'storm': return { text: `«Повітряний штурм Ісиченка»! Воротар біжить на кутовий!`, tone: 'special', big: true };
     case 'stormFail': return { text: MSG.stormFail(p), tone: 'info' };
     case 'varOffer': return null;

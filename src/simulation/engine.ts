@@ -4,7 +4,7 @@ import { BALANCE as B } from '../data/balance';
 import { FORMATIONS, roleFit, type FormationId, type Role } from '../data/formations';
 import { SPECIAL_BY_ID } from '../data/specials';
 import { makeRng, type Rng } from './rng';
-import { accelMul, attrMul, gkMul, injuryRiskMul, miscontrolChance, powerMul, reactionLag, sigmaMul as sigmaMul_, speedMul } from './fatigue';
+import { accelMul, attrMul, fatigueLevel, gkMul, injuryRiskMul, miscontrolChance, powerMul, reactionLag, sigmaMul as sigmaMul_, speedMul } from './fatigue';
 import type {
   Ball, EventType, Flight, GoalInfo, MatchEvent, MatchResult, MatchSetup, Phase, PlayerInit, PlayerResult,
   Restart, RestartType, SimPlayer, TeamSetup, TeamStats,
@@ -36,7 +36,7 @@ export interface TeamRt {
   players: SimPlayer[];
   subsLeft: number;
   subQueue: { out: string; in: string }[];
-  bonus: { atk: number; def: number; pass: number };
+  bonus: { atk: number; def: number; pass: number; cross: number };
   varLeft: boolean;
   golden: number; goldenUsed: boolean; recentOnTarget: number[];
   stormArmed: boolean; stormDone: boolean;
@@ -116,7 +116,7 @@ export class MatchEngine {
   private mkTeam(id: 0 | 1, ts: TeamSetup): TeamRt {
     const team: TeamRt = {
       id, setup: ts, dir: id === 0 ? 1 : -1, formation: ts.formation, players: [], subsLeft: B.match.maxSubs, subQueue: [],
-      bonus: { atk: 0, def: 0, pass: 0 }, varLeft: false, golden: 0, goldenUsed: false, recentOnTarget: [],
+      bonus: { atk: 0, def: 0, pass: 0, cross: 1 }, varLeft: false, golden: 0, goldenUsed: false, recentOnTarget: [],
       stormArmed: !!ts.stormArmed, stormDone: false, aiSubsDone: 0,
     };
     const slots = FORMATIONS[ts.formation];
@@ -140,7 +140,7 @@ export class MatchEngine {
       on: slot >= 0, off: null, played: slot >= 0,
       stun: 0, tackleCd: 0, decideT: 0, holdT: 0, immune: 0, yellow: 0, red: 0, injury: 0,
       pts: 0, goals: 0, assists: 0, shots: 0, saves: 0, tackles: 0,
-      runDx: 0, runDy: 0, runT: 0, dive: null, diveAnim: 0,
+      runDx: 0, runDy: 0, runT: 0, dive: null, diveAnim: 0, flip: 0,
     };
     this.players.push(p);
     return p;
@@ -149,17 +149,18 @@ export class MatchEngine {
   /** Командні бонуси від особливих гравців на полі (з обмеженням сумування). */
   recalcBonuses() {
     for (const t of this.teams) {
-      let atk = 0, def = 0, pass = 0, trio = 0, duo = 0;
+      let atk = 0, def = 0, pass = 0, trio = 0, duo = 0, cross = 1;
       for (const p of t.players) {
         if (!p.on || !p.fx) continue;
         if (p.sp?.bundle === 'trio') trio++;
         if (p.sp?.bundle === 'duo') duo++;
         atk += p.fx.teamAtk ?? 0; def += p.fx.teamDef ?? 0; pass += p.fx.teamPass ?? 0;
+        if (p.fx.teamCross) cross = Math.min(cross, p.fx.teamCross);
       }
       // бонус супертріо повний лише коли всі троє на полі
       if (trio === 3) { pass += 2; def += 1; atk += 1; }
       const cap = S.teamBonusCap;
-      t.bonus = { atk: Math.min(cap, atk), def: Math.min(cap, def), pass: Math.min(cap, pass) };
+      t.bonus = { atk: Math.min(cap, atk), def: Math.min(cap, def), pass: Math.min(cap, pass), cross };
       if (duo === 0) t.varLeft = false; else if (this.time === 0) t.varLeft = true;
     }
   }
@@ -385,7 +386,7 @@ export class MatchEngine {
   /** Верхова передача / навіс у точку. */
   loft(p: SimPlayer, tx: number, ty: number, target: number, cross = false, scatterMul = 1) {
     const b = this.ball;
-    const sc = S.loftScatter * clamp((100 - this.attr(p, 'pass')) / 30, 0.3, 1.6) * (cross ? p.fx?.cross ?? 1 : p.fx?.pass ?? 1) * scatterMul * sigmaMul_(p.stamina);
+    const sc = S.loftScatter * clamp((100 - this.attr(p, 'pass')) / 30, 0.3, 1.6) * (cross ? (p.fx?.cross ?? 1) * this.teams[p.team].bonus.cross : p.fx?.pass ?? 1) * scatterMul * sigmaMul_(p.stamina);
     tx = clamp(tx + this.gauss() * sc, 1, L - 1); ty = clamp(ty + this.gauss() * sc, 1, W - 1);
     const d = Math.max(4, dist(p.x, p.y, tx, ty));
     const T = clamp(d / S.loftSpeed, 0.7, 2.4);
@@ -414,7 +415,7 @@ export class MatchEngine {
   }
 
   /** Імовірність гола для удару, що йде у площину воріт. Тут діють правила суперздібностей. */
-  goalProb(p: SimPlayer, keeper: SimPlayer | null, d: number, cy: number, header: boolean, penalty: boolean): { pGoal: number; via?: string; kvia?: string } {
+  goalProb(p: SimPlayer, keeper: SimPlayer | null, d: number, cy: number, header: boolean, penalty: boolean, acrobatic = false): { pGoal: number; via?: string; kvia?: string } {
     if (!keeper) return { pGoal: 1 };
     const central = 1 - Math.abs(cy - CY) / P.goalHalf;
     let pSave = S.saveBase + (this.attr(keeper, 'gk') - 70) * S.saveGk + (d - 10) * S.saveDist + central * S.saveCentral
@@ -442,10 +443,12 @@ export class MatchEngine {
     } else if (f?.finishDanger != null && d < 22 && !penalty) {
       if (f.finishDanger > pGoal) { pGoal = f.finishDanger; via = p.sp!.ability; }
     }
+    // «Європейські ножиці»: несподіваний удар через себе — звичайному воротарю складніше (особливий воротар діє за своїми правилами)
+    if (acrobatic && ks == null && f?.scissors && f.scissors.goal > pGoal) { pGoal = f.scissors.goal; via = p.sp!.ability; }
     return { pGoal, via, kvia };
   }
 
-  shoot(p: SimPlayer, o: { header?: boolean; penalty?: boolean; forced?: 'goal' | 'nogoal'; freeKick?: boolean } = {}) {
+  shoot(p: SimPlayer, o: { header?: boolean; penalty?: boolean; forced?: 'goal' | 'nogoal'; freeKick?: boolean; scissors?: boolean } = {}) {
     const b = this.ball;
     const t = p.team;
     const gx = this.goalX(t);
@@ -466,18 +469,23 @@ export class MatchEngine {
     let over = this.rng() < S.overBarBase + d * S.overBarDist + (o.header ? 0.12 : 0);
     if (o.penalty) over = this.rng() > S.penaltyOnTarget;
     if (o.forced === 'goal') { ang = Math.atan2(aimY - p.y, sdx); over = false; }
+    if (o.scissors && p.fx?.scissors) {
+      // удар через себе: або точно у площину воріт, або вище воріт; утома знижує точність
+      const hit = this.rng() < p.fx.scissors.onTarget * (1 - 0.5 * fatigueLevel(p.stamina));
+      ang = Math.atan2(aimY - p.y, sdx); over = !hit;
+    }
     let cy = p.y + Math.tan(ang) * sdx;
     if (o.forced === 'nogoal' && Math.abs(cy - CY) < P.goalHalf && !over && this.rng() < 0.5) over = true;
     const inside = Math.abs(cy - CY) < P.goalHalf - 0.12;
     const post = !inside && Math.abs(cy - CY) < P.goalHalf + 0.16 && !over;
     const onTarget = inside && !over;
-    const power = (p.fx?.power ?? 1) * (o.header ? 0.6 : 1) * (0.92 + 0.16 * this.rng()) * powerMul(p.stamina);
+    const power = (p.fx?.power ?? 1) * (o.header && !o.scissors ? 0.6 : 1) * (o.scissors ? 1.08 : 1) * (0.92 + 0.16 * this.rng()) * powerMul(p.stamina);
     const speed = S.shotSpeed * power;
     let willSave = false;
     let via: string | undefined;
     const keeperHome = keeper && dist(keeper.x, keeper.y, gx, CY) < 20;
     if (onTarget && keeper && keeperHome) {
-      const g = this.goalProb(p, keeper, d, cy, !!o.header, !!o.penalty);
+      const g = this.goalProb(p, keeper, d, cy, !!o.header && !o.scissors, !!o.penalty, !!o.scissors);
       let pGoal = g.pGoal;
       if (o.forced === 'goal') pGoal = 1;
       if (o.forced === 'nogoal') pGoal = 0;
@@ -487,7 +495,7 @@ export class MatchEngine {
     const fl = this.release(p, 'shot', -1);
     const flightD = Math.hypot(sdx, cy - p.y);
     const T = flightD / speed;
-    fl.shot = { shooter: p.i, onTarget, willSave, cy, header: !!o.header, penalty: !!o.penalty, keeper: keeper ? keeper.i : -1, post, resolved: false, dist: d, viaAbility: via };
+    fl.shot = { shooter: p.i, onTarget, willSave, cy, header: !!o.header && !o.scissors, scissors: !!o.scissors, penalty: !!o.penalty, keeper: keeper ? keeper.i : -1, post, resolved: false, dist: d, viaAbility: via };
     b.x = p.x + Math.cos(ang) * 0.8; b.y = p.y + Math.sin(ang) * 0.8;
     b.vx = Math.cos(ang) * speed; b.vy = Math.sin(ang) * speed;
     if (over) { b.z = o.header ? 2 : 0.3; b.vz = (3.4 - b.z + 0.5 * S.gravity * T * T) / T; }
@@ -708,14 +716,14 @@ export class MatchEngine {
       this.stats[scTeam].goals++;
       const g: GoalInfo = {
         team: scTeam, min: this.minute(), minLabel: this.minLabel(), pid: scorer?.pid ?? '', name: own ? `${last!.name} (автогол)` : scorer?.name ?? 'Гравець',
-        special: own ? undefined : scorer?.sp?.id, assist: assist?.name, own, pen: shot?.penalty, header: shot?.header,
+        special: own ? undefined : scorer?.sp?.id, assist: assist?.name, own, pen: shot?.penalty, header: shot?.header, scissors: shot?.scissors,
       };
       this.goals.push(g);
       if (!own && scorer) { scorer.goals++; scorer.pts += 3; }
       if (assist) { assist.assists++; assist.pts += 1.6; }
       const k = this.keeper(defTeam); if (k) k.pts -= 0.4;
       if (shot?.viaAbility) this.ability(shot.viaAbility);
-      this.emit(own ? 'ownGoal' : 'goal', scTeam, own ? last : scorer, { name2: assist?.name, text: shot?.penalty ? 'pen' : shot?.header ? 'head' : undefined });
+      this.emit(own ? 'ownGoal' : 'goal', scTeam, own ? last : scorer, { name2: assist?.name, text: shot?.scissors ? 'scissors' : shot?.penalty ? 'pen' : shot?.header ? 'head' : undefined });
       this.sfx = 'goal';
       this.wait(3.0, () => this.kickoff(defTeam));
     };
@@ -904,6 +912,7 @@ export class MatchEngine {
       if (p.tackleCd > 0) p.tackleCd -= dt;
       if (p.immune > 0) p.immune -= dt;
       if (p.diveAnim > 0) p.diveAnim -= dt;
+      if (p.flip > 0) p.flip -= dt;
       if (p.stun > 0) { p.stun -= dt; p.vx *= 0.9; p.vy *= 0.9; p.x += p.vx * dt; p.y += p.vy * dt; continue; }
       if (p.dive) {
         const dv = p.dive;
@@ -1129,10 +1138,18 @@ export class MatchEngine {
     const a = this.adv(win.team, b.x);
     b.lastTouch = win.i; b.lastTeam = win.team;
     if (win.role === 'GK' && this.inOwnBox(win)) { this.control(win); return; }
-    if (a > L - 17 && Math.abs(b.y - CY) < 15) {
+    if ((a > L - 17 && Math.abs(b.y - CY) < 15) || (win.fx?.scissors && fl.team === win.team && a > L - 21 && Math.abs(b.y - CY) < 17)) {
       win.x = b.x; win.y = b.y;
       if (fl.team === win.team && fl.by !== win.i) this.lastPass = { from: fl.by, to: win.i, team: win.team, t: this.time };
-      if (fl.storm && win.sp?.id === 'ihor') {
+      const sc = win.fx?.scissors;
+      if (sc && fl.team === win.team && b.z > 0.7 && this.rng() < sc.attempt * (1 - 0.6 * fatigueLevel(win.stamina))) {
+        // «Європейські ножиці»: акробатичний удар через себе після навісу
+        win.flip = 0.7;
+        this.ability(win.sp!.ability);
+        this.emit('scissors', win.team, win);
+        this.sfx = 'scissors';
+        this.shoot(win, { header: true, scissors: true });
+      } else if (fl.storm && win.sp?.id === 'ihor') {
         this.ability('Повітряний штурм Ісиченка');
         this.shoot(win, { header: true, forced: this.rng() < S.stormHeaderGoal ? 'goal' : 'nogoal' });
       } else {

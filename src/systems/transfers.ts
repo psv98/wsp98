@@ -59,7 +59,7 @@ export function rollCard(state: SaveState, rng: Rng): CardDrop | null {
   const opts: Opt[] = cands.map(({ unit, steal }) => ({
     drop: { kind: 'unit', unitId: unit.id, from: unit.id === 'oksana' ? oksanaFrom : steal ? unitOwner(state, unit)! : undefined } as CardDrop,
     // перехід Оксани із «Суспільного» — звичайна божественна рідкісність, без додаткового штрафу
-    w: ((T.weights as Record<string, number>)[unit.rarity] / perRarity[unit.rarity]) * (steal && unit.id !== 'oksana' ? T.stealFactor : 1),
+    w: ((T.weights as Record<string, number>)[unit.rarity] / perRarity[unit.rarity]) * (unit.weight ?? 1) * (steal && unit.id !== 'oksana' ? T.stealFactor : 1),
   }));
   // якщо користувач керує «Суспільним», Оксана гарантовано зʼявляється в клубі до кінця сезону
   if (state.userClub === OKSANA_HOME && !state.transfers.owners['oksana'] && state.round + 1 >= T.oksanaForceRound) return { kind: 'unit', unitId: 'oksana' };
@@ -172,7 +172,7 @@ export function aiTransfers(state: SaveState, rng: Rng, reserved?: string): Tran
   const clubsWithout = () => { const c = aiClubs.filter((id) => state.clubs[id].megaTransfers.length === 0); return c.length ? c : aiClubs; };
   if (roundNo >= T.aiFromRound) {
     if (state.transfers.aiCount < T.aiMaxPerSeason && rng() < T.aiRoundChance) {
-      const unit = weightedPick(rng, free(), (u) => (T.aiWeights as Record<string, number>)[u.rarity] ?? 0);
+      const unit = weightedPick(rng, free(), (u) => ((T.aiWeights as Record<string, number>)[u.rarity] ?? 0) * (u.weight ?? 1));
       if (unit) {
         const cs = clubsWithout();
         out.push(giveUnit(state, cs[Math.floor(rng() * cs.length)], unit.id, 'mega'));
