@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect } from 'react';
+import { Component, Suspense, lazy, useEffect, type ComponentType, type ReactNode } from 'react';
 import { About, Calendar, ClubSelect, CoinsScreen, History, Hub, Results, SettingsScreen, Stats, TableScreen, Title } from './components/screens';
 import { Squad } from './components/Squad';
 import { Transfers } from './components/Transfers';
@@ -6,12 +6,42 @@ import { Toast } from './components/ui';
 import { audio } from './game/audio';
 import { boot, go, useApp, type Screen } from './game/store';
 
+/**
+ * Відкладене завантаження екрана. Якщо після нового релізу старий файл уже недоступний,
+ * сторінка один раз перезавантажується й отримує свіжу версію гри (прогрес зберігається в IndexedDB).
+ */
+function lazyScreen<T extends ComponentType>(load: () => Promise<{ default: T }>) {
+  return lazy(() => load().then((m) => { try { sessionStorage.removeItem('bsk-reload'); } catch { /* немає сховища */ } return m; }).catch((e) => {
+    let tried = false;
+    try { tried = sessionStorage.getItem('bsk-reload') === '1'; sessionStorage.setItem('bsk-reload', '1'); } catch { /* немає сховища */ }
+    if (!tried) { try { sessionStorage.setItem('bsk-resume', '1'); } catch { /* немає сховища */ } window.location.reload(); return new Promise<{ default: T }>(() => undefined); }
+    throw e;
+  }));
+}
+
+/** Запобіжник: замість порожнього екрана — зрозуміле повідомлення й кнопка перезавантаження. */
+class ScreenGuard extends Component<{ children: ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() { return { failed: true }; }
+  componentDidCatch(e: unknown) { console.error(e); }
+  render() {
+    if (!this.state.failed) return this.props.children;
+    return (
+      <div className="title"><div className="title-inner">
+        <h2>Гру оновлено</h2>
+        <p className="muted" style={{ maxWidth: 420 }}>Вийшла нова версія «Білого суперкубка». Перезавантажте сторінку — ваш прогрес збережено.</p>
+        <button type="button" className="btn primary big" onClick={() => { try { sessionStorage.removeItem('bsk-reload'); } catch { /* немає сховища */ } window.location.reload(); }}>Перезавантажити</button>
+      </div></div>
+    );
+  }
+}
+
 // Важкі екрани (матч, підсумки, церемонія) завантажуються лише коли потрібні
-const MatchScreen = lazy(() => import('./components/MatchFlow').then((m) => ({ default: m.MatchScreen })));
-const PreMatch = lazy(() => import('./components/MatchFlow').then((m) => ({ default: m.PreMatch })));
-const PostMatch = lazy(() => import('./components/MatchFlow').then((m) => ({ default: m.PostMatch })));
-const Offseason = lazy(() => import('./components/Offseason').then((m) => ({ default: m.Offseason })));
-const Ceremony = lazy(() => import('./components/Ceremony').then((m) => ({ default: m.Ceremony })));
+const MatchScreen = lazyScreen(() => import('./components/MatchFlow').then((m) => ({ default: m.MatchScreen })));
+const PreMatch = lazyScreen(() => import('./components/MatchFlow').then((m) => ({ default: m.PreMatch })));
+const PostMatch = lazyScreen(() => import('./components/MatchFlow').then((m) => ({ default: m.PostMatch })));
+const Offseason = lazyScreen(() => import('./components/Offseason').then((m) => ({ default: m.Offseason })));
+const Ceremony = lazyScreen(() => import('./components/Ceremony').then((m) => ({ default: m.Ceremony })));
 
 const NEED_SAVE: Screen[] = ['hub', 'squad', 'table', 'calendar', 'results', 'transfers', 'coins', 'stats', 'history', 'prematch', 'match', 'post', 'ceremony', 'offseason'];
 
@@ -54,5 +84,5 @@ export function App() {
     case 'ceremony': view = <Ceremony />; break;
     case 'offseason': view = <Offseason />; break;
   }
-  return <div className={`app ${app.settings.lowGfx ? 'lowgfx' : ''}`}><Suspense fallback={<div className="page muted center">Завантаження…</div>}>{view}</Suspense><Toast /></div>;
+  return <div className={`app ${app.settings.lowGfx ? 'lowgfx' : ''}`}><ScreenGuard><Suspense fallback={<div className="page muted center">Завантаження…</div>}>{view}</Suspense></ScreenGuard><Toast /></div>;
 }

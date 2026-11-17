@@ -77,7 +77,10 @@ export function resumeScreen(s: SaveState): Screen {
 export async function boot() {
   const [res, settings] = await Promise.all([loadGame(), loadSettings()]);
   audio.apply(settings);
-  set({ loaded: true, save: res.state, settings, recovered: res.recovered });
+  // після автоматичного перезавантаження через оновлення гри — одразу повертаємо гравця до його сезону
+  let resume = false;
+  try { resume = sessionStorage.getItem('bsk-resume') === '1'; sessionStorage.removeItem('bsk-resume'); } catch { /* немає сховища */ }
+  set({ loaded: true, save: res.state, settings, recovered: res.recovered, ...(resume && res.state ? { screen: resumeScreen(res.state) } : {}) });
   if (res.recovered) toast('Останнє збереження було пошкоджене — відновлено попередній коректний стан.', 'err');
 }
 

@@ -30,41 +30,17 @@ body { background: var(--bg); }
 .btn.primary, .btn.green, .btn.danger, .btn.ghost, .btn.blue, .btn.purple, .btn.silver, .btn.primary:hover:not(:disabled), .btn.green:hover:not(:disabled), .btn.danger:hover:not(:disabled) { background: none; filter: none; box-shadow: none; }
 .btn:hover:not(:disabled), .mbtn:hover:not(:disabled) { filter: brightness(1.06); }
 .btn { --img: url('/assets/ui/buttons/button-green-default.svg'); }
-.btn:hover:not(:disabled) { --img: url('/assets/ui/buttons/button-green-hover.svg'); }
-.btn:active:not(:disabled) { --img: url('/assets/ui/buttons/button-green-pressed.svg'); }
 .btn.primary { --img: url('/assets/ui/buttons/button-gold-default.svg'); }
-.btn.primary:hover:not(:disabled) { --img: url('/assets/ui/buttons/button-gold-hover.svg'); }
-.btn.primary:active:not(:disabled) { --img: url('/assets/ui/buttons/button-gold-pressed.svg'); }
 .btn.green { --img: url('/assets/ui/buttons/button-green-default.svg'); }
-.btn.green:hover:not(:disabled) { --img: url('/assets/ui/buttons/button-green-hover.svg'); }
-.btn.green:active:not(:disabled) { --img: url('/assets/ui/buttons/button-green-pressed.svg'); }
 .btn.blue { --img: url('/assets/ui/buttons/button-blue-default.svg'); }
-.btn.blue:hover:not(:disabled) { --img: url('/assets/ui/buttons/button-blue-hover.svg'); }
-.btn.blue:active:not(:disabled) { --img: url('/assets/ui/buttons/button-blue-pressed.svg'); }
 .btn.purple { --img: url('/assets/ui/buttons/button-purple-default.svg'); }
-.btn.purple:hover:not(:disabled) { --img: url('/assets/ui/buttons/button-purple-hover.svg'); }
-.btn.purple:active:not(:disabled) { --img: url('/assets/ui/buttons/button-purple-pressed.svg'); }
 .btn.danger { --img: url('/assets/ui/buttons/button-red-default.svg'); }
-.btn.danger:hover:not(:disabled) { --img: url('/assets/ui/buttons/button-red-hover.svg'); }
-.btn.danger:active:not(:disabled) { --img: url('/assets/ui/buttons/button-red-pressed.svg'); }
 .btn.silver, .btn.ghost { --img: url('/assets/ui/buttons/button-silver-default.svg'); }
-.btn.silver, .btn.ghost:hover:not(:disabled) { --img: url('/assets/ui/buttons/button-silver-hover.svg'); }
-.btn.silver, .btn.ghost:active:not(:disabled) { --img: url('/assets/ui/buttons/button-silver-pressed.svg'); }
 .mbtn { --img: url('/assets/ui/buttons/button-blue-default.svg'); }
-.mbtn:hover:not(:disabled) { --img: url('/assets/ui/buttons/button-blue-hover.svg'); }
-.mbtn:active:not(:disabled) { --img: url('/assets/ui/buttons/button-blue-pressed.svg'); }
 .mbtn.on { --img: url('/assets/ui/buttons/button-gold-default.svg'); }
-.mbtn.on:hover:not(:disabled) { --img: url('/assets/ui/buttons/button-gold-hover.svg'); }
-.mbtn.on:active:not(:disabled) { --img: url('/assets/ui/buttons/button-gold-pressed.svg'); }
 .mbar > .mbtn:first-child { --img: url('/assets/ui/buttons/button-red-default.svg'); }
-.mbar > .mbtn:first-child:hover:not(:disabled) { --img: url('/assets/ui/buttons/button-red-hover.svg'); }
-.mbar > .mbtn:first-child:active:not(:disabled) { --img: url('/assets/ui/buttons/button-red-pressed.svg'); }
 .tabs button { --img: url('/assets/ui/buttons/button-silver-default.svg'); }
-.tabs button:hover:not(:disabled) { --img: url('/assets/ui/buttons/button-silver-hover.svg'); }
-.tabs button:active:not(:disabled) { --img: url('/assets/ui/buttons/button-silver-pressed.svg'); }
 .tabs button.on { --img: url('/assets/ui/buttons/button-gold-default.svg'); }
-.tabs button.on:hover:not(:disabled) { --img: url('/assets/ui/buttons/button-gold-hover.svg'); }
-.tabs button.on:active:not(:disabled) { --img: url('/assets/ui/buttons/button-gold-pressed.svg'); }
 
 .mbtn { --bh: 52px; font-size: 18px; padding-left: 0; padding-right: 0; min-width: calc(var(--bh) * 1.15); background: none !important; }
 .mbtn.on { color: #2a1a00; text-shadow: none; }
@@ -465,3 +441,9 @@ input[type='range'] { height: 36px; }
 .reveal .flip-wait { animation: none; box-shadow: none; }
 .reveal.hidden-card .gc-frame.gc-back { animation: shake 0.18s linear infinite, backGlow 0.9s ease-in-out infinite alternate; }
 @keyframes backGlow { from { filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.3)); } to { filter: drop-shadow(0 0 34px rgba(255, 255, 255, 0.85)); } }
+
+/* Кнопки не міняють картинку при наведенні/натисканні (раніше підвантаження нового SVG давало мерехтіння):
+   стан показується яскравістю та легким зсувом. */
+.btn, .mbtn, .tabs button { transition: filter var(--t-fast), transform var(--t-fast); will-change: filter; }
+.btn:hover:not(:disabled), .mbtn:hover:not(:disabled), .tabs button:hover:not(:disabled) { filter: brightness(1.12) saturate(1.05); }
+.btn:active:not(:disabled), .mbtn:active:not(:disabled), .tabs button:active:not(:disabled) { filter: brightness(0.9); transform: translateY(2px); }
