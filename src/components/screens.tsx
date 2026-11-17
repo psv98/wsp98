@@ -315,7 +315,7 @@ export function MatchDetails({ m, me }: { m: UserMatchRecord; me: string }) {
   return (
     <div className="grid" style={{ gap: 10 }}>
       <FixtureRow home={m.home} away={m.away} score={m.score} me={me} />
-      {m.goals.length > 0 && <div className="evlist">{m.goals.map((g, i) => <div key={i}><span className="m">{g.minLabel}'</span><span>⚽ {g.name}{g.pen ? ' (пен.)' : ''}{g.header ? ' (головою)' : ''} — {clubName(g.team === 0 ? m.home : m.away)}{g.assist ? ` · асист: ${g.assist}` : ''}</span></div>)}</div>}
+      {m.goals.length > 0 && <div className="evlist">{m.goals.map((g, i) => <div key={i}><span className="m">{g.minLabel}'</span><span>⚽ {g.name}{g.pen ? ' (пен.)' : ''}{g.scissors ? ' (ножицями!)' : g.header ? ' (головою)' : ''} — {clubName(g.team === 0 ? m.home : m.away)}{g.assist ? ` · асист: ${g.assist}` : ''}</span></div>)}</div>}
       <div style={{ '--c1': c1, '--c2': c2 } as CSSProperties}>
         {L.map(([label, k]) => { const a = m.stats[0][k] as number, b = m.stats[1][k] as number; const t = a + b || 1; return (<div className="statline" key={k}><b>{a}</b><div><div className="lbl">{label}</div><div className="bar"><i style={{ width: `${a + b === 0 ? 50 : (a / t) * 100}%` }} /><u /></div></div><b>{b}</b></div>); })}
       </div>

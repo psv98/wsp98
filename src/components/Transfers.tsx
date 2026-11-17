@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { BALANCE as B } from '../data/balance';
 import { RARITY } from '../data/rarity';
-import { BUNDLES, IMI_SPECIALS, STARS } from '../data/specials';
+import { BUNDLES, DROP_SPECIALS, STARS } from '../data/specials';
 import { clubName } from '../game/selectors';
 import { MSG, person } from '../data/i18n';
 import { act, useApp } from '../game/store';
@@ -17,14 +17,14 @@ export function Transfers() {
   const open = marketOpen(s);
   const [tab, setTab] = useState(open ? 1 : 0);
   const owners = s.transfers.owners;
-  const mineCount = IMI_SPECIALS.filter((x) => owners[x.id] === s.userClub).length;
-  const sorted = IMI_SPECIALS.slice().sort((a, b) => RARITY[a.rarity].order - RARITY[b.rarity].order);
+  const mineCount = DROP_SPECIALS.filter((x) => owners[x.id] === s.userClub).length;
+  const sorted = DROP_SPECIALS.slice().sort((a, b) => RARITY[a.rarity].order - RARITY[b.rarity].order);
   const lock = s.transfers.legendaryLock;
   return (
     <>
       <TopBar title="Трансфери" />
       <div className="page grid">
-        <div className="tabs">{[`Мегатрансфери ІМІ (${mineCount}/14)`, `Ринок зірок ${open ? '· ВІДКРИТО' : '· закрито'}`, 'Журнал трансферів'].map((t, i) => <button type="button" key={t} className={tab === i ? 'on' : ''} onClick={() => setTab(i)}>{t}</button>)}</div>
+        <div className="tabs">{[`Мегатрансфери (${mineCount}/${DROP_SPECIALS.length})`, `Ринок зірок ${open ? '· ВІДКРИТО' : '· закрито'}`, 'Журнал трансферів'].map((t, i) => <button type="button" key={t} className={tab === i ? 'on' : ''} onClick={() => setTab(i)}>{t}</button>)}</div>
         {tab === 0 && (<>
           <div className="panel">
             <h3>Як це працює</h3>

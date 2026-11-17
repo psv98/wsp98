@@ -202,6 +202,7 @@ export class PitchRenderer {
     }
     // гравці (спершу звичайні, потім особливі — щоб їх було видно)
     const labels: SimPlayer[] = [];
+    const badges: SimPlayer[] = [];
     for (let pass = 0; pass < 2; pass++) {
       for (const p of m.players) {
         if (!p.on || (pass === 0) === !!p.sp) continue;
@@ -212,17 +213,31 @@ export class PitchRenderer {
           const img = p.sp.kind === 'imi' ? (this.teams[p.team].isUser ? IMI_USER : IMI_OPP) : p.sp.img;
           sp = this.sprite(img, this.imgs.get(img), col, Math.max(2.2, r * 0.2), !this.low);
           labels.push(p);
+          if (p.sp.kind === 'guest') badges.push(p);
         } else {
           const t = this.teams[p.team];
           sp = this.sprite(t.logo + (p.role === 'GK' ? 'gk' : ''), this.imgs.get(t.logo), p.role === 'GK' ? '#c8ff3d' : p.team === 0 ? '#ffffff' : '#10182a', Math.max(1.4, r * 0.13), false);
         }
         const sz = sp.width / this.dpr;
-        if (p.diveAnim > 0 && p.role === 'GK') {
+        if (p.flip > 0) {
+          // акробатичний удар: емблема робить оберт, за нею — синя дуга
+          const k = 1 - p.flip / 0.7;
+          g.save(); g.strokeStyle = 'rgba(80,160,255,0.85)'; g.lineWidth = Math.max(2, r * 0.35); g.lineCap = 'round';
+          g.shadowColor = '#4fa8ff'; g.shadowBlur = this.low ? 0 : 14;
+          g.beginPath(); g.arc(x, y, r * 1.7, -Math.PI / 2 + k * Math.PI * 2 - 2.2, -Math.PI / 2 + k * Math.PI * 2); g.stroke(); g.restore();
+          g.save(); g.translate(x, y); g.rotate(k * Math.PI * 2); g.scale(1 + 0.25 * Math.sin(k * Math.PI), 1 + 0.25 * Math.sin(k * Math.PI)); g.drawImage(sp, -sz / 2, -sz / 2, sz, sz); g.restore();
+        } else if (p.diveAnim > 0 && p.role === 'GK') {
           g.save(); g.translate(x, y); g.scale(1.25, 0.85); g.drawImage(sp, -sz / 2, -sz / 2, sz, sz); g.restore();
         } else if (p.stun > 0) {
           g.globalAlpha = 0.75; g.drawImage(sp, x - sz / 2, y - sz / 2 + 1, sz, sz); g.globalAlpha = 1;
         } else g.drawImage(sp, x - sz / 2, y - sz / 2, sz, sz);
       }
+    }
+    // маленький символ рідкісності (щит) у запрошених персонажів
+    for (const p of badges) {
+      const x = this.X(p.x, p.y) + r * 0.78, y = this.Y(p.x, p.y) - r * 0.78, s2 = Math.max(5, r * 0.5);
+      g.save(); g.translate(x, y); g.fillStyle = RARITY[p.sp!.rarity].color; g.strokeStyle = '#fff'; g.lineWidth = 1.2;
+      g.beginPath(); g.moveTo(0, -s2); g.lineTo(s2 * 0.85, -s2 * 0.6); g.lineTo(s2 * 0.75, s2 * 0.25); g.quadraticCurveTo(s2 * 0.4, s2 * 0.85, 0, s2); g.quadraticCurveTo(-s2 * 0.4, s2 * 0.85, -s2 * 0.75, s2 * 0.25); g.lineTo(-s2 * 0.85, -s2 * 0.6); g.closePath(); g.fill(); g.stroke(); g.restore();
     }
     // підписи особливих гравців
     if (labels.length) {

@@ -1,4 +1,4 @@
-// Айдентика «Білого суперкубка». Єдине джерело графіки — public/assets/icons/supercup.svg:
+// Айдентика «Білого суперкубка». Єдине джерело графіки — public/assets/icons/supercup.webp:
 // усі компоненти нижче використовують саме його, графіка ніде не дублюється.
 import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import { CLUB_BY_ID } from '../data/clubs';
@@ -7,7 +7,7 @@ import { audio } from '../game/audio';
 import { useApp } from '../game/store';
 import { Btn, Logo } from './ui';
 
-export const SUPERCUP_SRC = 'assets/icons/supercup.svg';
+export const SUPERCUP_SRC = 'assets/icons/supercup.webp';
 
 export function SupercupIcon({ size = 24, className = '', title }: { size?: number; className?: string; title?: string }) {
   return <img className={`sc-icon ${className}`} src={assetUrl(SUPERCUP_SRC)} width={size} height={size} alt={title ?? ''} title={title} style={{ width: size, height: size }} />;

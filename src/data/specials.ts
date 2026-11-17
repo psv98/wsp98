@@ -19,6 +19,9 @@ export interface Fx {
   header?: number; // бонус до гри головою
   power?: number; // множник сили удару
   teamAtk?: number; teamDef?: number; teamPass?: number; // командні бонуси
+  teamCross?: number; // множник розкиду флангових навісів команди (менше — точніше)
+  /** Акробатичний удар через себе після навісу («Європейські ножиці») */
+  scissors?: { attempt: number; onTarget: number; goal: number };
 }
 
 export type Gender = 'female' | 'male';
@@ -33,7 +36,12 @@ export interface SpecialDef {
   short: string;
   title: string;
   rarity: Rarity;
-  kind: 'imi' | 'star';
+  /** imi — персонажі ІМІ; guest — запрошені персонажі (випадають як мегатрансфер); star — світові зірки ринку */
+  kind: 'imi' | 'guest' | 'star';
+  /** Множник імовірності випадіння відносно середнього для рідкісності */
+  dropWeight?: number;
+  /** Організація, яку представляє персонаж */
+  org?: string;
   role: Role;
   side?: 'L' | 'R';
   roleName: string;
@@ -63,16 +71,16 @@ export const SPECIALS: SpecialDef[] = [
     id: 'hanna', gender: 'female', nameAcc: 'Ганну Чабарай', name: 'Ганна Чабарай', short: 'Ганна Ч.', title: 'Комунікаційний прорив', rarity: 'mythic', kind: 'imi',
     role: 'ST', roleName: 'Нападниця / вінгерка', ability: 'Комунікаційний прорив', fatigue: 0.7, img: IMI,
     perks: ['65% реалізації небезпечних моментів', 'Висока швидкість', 'Ідеально відкривається під передачі', 'Здатна пробити навіть Ігоря Ісиченка'],
-    user: { q: 95, finishDanger: 0.65, eliteFinish: 0.32, speed: 1.1, evade: 0.75, teamAtk: 2 },
-    opp: { q: 88, finishDanger: 0.42, eliteFinish: 0.18, speed: 1.05, evade: 0.8 },
+    user: { q: 93, finishDanger: 0.65, eliteFinish: 0.32, speed: 1.1, evade: 0.75, teamAtk: 2 },
+    opp: { q: 86, finishDanger: 0.42, eliteFinish: 0.18, speed: 1.05, evade: 0.8 },
   },
   {
     id: 'ihor', gender: 'male', nameAcc: 'Ігоря Ісиченка', name: 'Ігор Ісиченко', short: 'Ігор І.', title: 'Залізна брама', rarity: 'mythic', kind: 'imi',
     role: 'GK', roleName: 'Воротар', ability: 'Залізна брама + «Повітряний штурм»', fatigue: 0, img: IMI,
     perks: ['Майже непробивний для звичайних ударів', 'Не втомлюється', 'Посилює захист команди', 'Раз на 5–7 матчів іде на чужий кутовий'],
     // у суперника — приблизно 90% від рівня в клубі користувача
-    user: { q: 95, save: 0.975, teamDef: 3, header: 14 },
-    opp: { q: 92, save: 0.88, teamDef: 2, header: 12 },
+    user: { q: 93, save: 0.975, teamDef: 3, header: 14 },
+    opp: { q: 90, save: 0.88, teamDef: 2, header: 12 },
   },
   {
     id: 'barkar', gender: 'male', nameAcc: 'Дмитра Баркара', name: 'Дмитро Баркар', short: 'Дмитро Б.', title: 'Тотальний контроль', rarity: 'legendary', kind: 'imi', bundle: 'trio',
@@ -129,6 +137,15 @@ export const SPECIALS: SpecialDef[] = [
     user: { q: 88, pass: 0.45, teamPass: 3, teamAtk: 1 }, opp: { q: 82, pass: 0.7, teamPass: 1 },
   },
   {
+    id: 'katarina-mathernova', gender: 'female', nameAcc: 'Катаріну Матернову', name: 'Катаріна Матернова', short: 'Катаріна М.', title: 'Повітряна блискавка', rarity: 'epic', kind: 'guest',
+    org: 'Європейський Союз', dropWeight: 0.45, // рідше за середній епічний персонаж
+    role: 'ST', side: 'R', roleName: 'Нападниця / права вінгерка', ability: 'Європейські ножиці', fatigue: 1, img: 'assets/specials/eu.png',
+    perks: ['Майстриня акробатичних ударів', '«Європейські ножиці»: удар через себе після навісу', 'Висока швидкість і дриблінг', 'Посилює флангові навіси команди'],
+    // швидкість 94, дриблінг 90, удари 88, гра головою 80, передачі 84, захист 48 — через модифікатори наявної системи рейтингів
+    user: { q: 89, speed: 1.14, evade: 0.72, header: -9, pass: 0.9, teamCross: 0.85, scissors: { attempt: 0.2, onTarget: 0.65, goal: 0.6 } },
+    opp: { q: 85, speed: 1.08, evade: 0.82, header: -9, pass: 0.95, teamCross: 0.9, scissors: { attempt: 0.16, onTarget: 0.55, goal: 0.5 } },
+  },
+  {
     id: 'troian', gender: 'female', nameAcc: 'Валентину Троян', name: 'Валентина Троян', short: 'Валентина Т.', title: 'Фортеця центру', rarity: 'rare', kind: 'imi',
     role: 'DM', roleName: 'Опорна півзахисниця', ability: 'Фортеця центру', fatigue: 1, img: IMI,
     perks: ['+20% до перехоплень', 'Контроль середини поля', 'Допомагає центральним захисникам'],
@@ -169,6 +186,8 @@ export const SPECIALS: SpecialDef[] = [
 
 export const SPECIAL_BY_ID: Record<string, SpecialDef> = Object.fromEntries(SPECIALS.map((s) => [s.id, s]));
 export const IMI_SPECIALS = SPECIALS.filter((s) => s.kind === 'imi');
+/** Усі персонажі, що випадають як мегатрансфер (ІМІ та запрошені). */
+export const DROP_SPECIALS = SPECIALS.filter((s) => s.kind !== 'star');
 export const STARS = SPECIALS.filter((s) => s.kind === 'star');
 
 export interface BundleDef { id: 'trio' | 'duo'; name: string; title: string; members: string[]; bonus: string }
@@ -178,9 +197,9 @@ export const BUNDLES: Record<'trio' | 'duo', BundleDef> = {
 };
 
 /** Одиниця трансферного пулу: одиночний персонаж або комплект. */
-export interface TransferUnit { id: string; rarity: Rarity; members: string[]; bundle?: 'trio' | 'duo' }
+export interface TransferUnit { id: string; rarity: Rarity; members: string[]; bundle?: 'trio' | 'duo'; weight?: number }
 export const TRANSFER_UNITS: TransferUnit[] = [
-  ...IMI_SPECIALS.filter((s) => !s.bundle).map((s) => ({ id: s.id, rarity: s.rarity, members: [s.id] })),
+  ...DROP_SPECIALS.filter((s) => !s.bundle).map((s) => ({ id: s.id, rarity: s.rarity, members: [s.id], weight: s.dropWeight })),
   { id: 'trio', rarity: 'legendary' as Rarity, members: BUNDLES.trio.members, bundle: 'trio' as const },
   { id: 'duo', rarity: 'legendary' as Rarity, members: BUNDLES.duo.members, bundle: 'duo' as const },
 ];

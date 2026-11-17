@@ -33,7 +33,7 @@ export interface MatchSetup { home: TeamSetup; away: TeamSetup; seed: number; au
 export type EventType =
   | 'kickoff' | 'goal' | 'ownGoal' | 'shot' | 'save' | 'miss' | 'post' | 'block' | 'foul' | 'yellow' | 'red' | 'secondYellow'
   | 'injury' | 'sub' | 'corner' | 'penalty' | 'freeKick' | 'halftime' | 'fulltime' | 'golden' | 'lastAttack'
-  | 'storm' | 'stormFail' | 'var' | 'varOverturn' | 'varStands' | 'varOffer' | 'ability' | 'header' | 'secondHalf' | 'pass' | 'tackle' | 'whistle';
+  | 'storm' | 'stormFail' | 'var' | 'varOverturn' | 'varStands' | 'varOffer' | 'ability' | 'scissors' | 'header' | 'secondHalf' | 'pass' | 'tackle' | 'whistle';
 
 export interface MatchEvent {
   type: EventType;
@@ -68,7 +68,7 @@ export interface PlayerResult {
   special?: string;
 }
 
-export interface GoalInfo { team: 0 | 1; min: number; minLabel: string; pid: string; name: string; special?: string; assist?: string; own?: boolean; pen?: boolean; header?: boolean }
+export interface GoalInfo { team: 0 | 1; min: number; minLabel: string; pid: string; name: string; special?: string; assist?: string; own?: boolean; pen?: boolean; header?: boolean; scissors?: boolean }
 
 export interface MatchResult {
   score: [number, number];
@@ -100,11 +100,12 @@ export interface SimPlayer {
   runDx: number; runDy: number; runT: number;
   dive: { x: number; y: number; t: number; reach: boolean } | null;
   diveAnim: number;
+  flip: number; // анімація акробатичного удару (секунди)
 }
 
 export interface ShotInfo {
   shooter: number; onTarget: boolean; willSave: boolean; cy: number; header: boolean; penalty: boolean;
-  keeper: number; post: boolean; resolved: boolean; dist: number; viaAbility?: string;
+  keeper: number; post: boolean; resolved: boolean; dist: number; viaAbility?: string; scissors?: boolean;
 }
 
 export interface Flight {
