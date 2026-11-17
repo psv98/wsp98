@@ -122,6 +122,23 @@ export const BALANCE = {
 
   seasons: { aiGrowthPerSeason: 1.2, aiGrowthCap: 6 },
 
+  // Вказівки з бровки: тривалість і перезарядка в секундах реального часу матчу
+  orders: {
+    duration: 15, cooldown: 25,
+    attack: { lineAtk: 7, lineDef: 4, shootRange: 1.15, drain: 1.2 }, // вище лінії, частіше удари, більше витрата сил
+    hold: { lineAtk: -6, lineDef: -8, shootRange: 0.9, drain: 0.85 }, // нижчий блок, менше ризику, економія сил
+    press: { lineAtk: 2, lineDef: 6, tackleCd: 0.75, drain: 1.35, foul: 1.25 }, // двоє пресингують по всьому полю
+  },
+
+  // Погода: шанси (сума = 1) та вплив на гру
+  weather: {
+    chance: { clear: 0.5, night: 0.2, rain: 0.18, snow: 0.12 },
+    rain: { friction: 0.7, passSigma: 1.18, miscontrol: 0.06, drain: 1.06, speed: 0.98 }, // мʼяч ковзає далі, передачі неточніші
+    snow: { friction: 1.45, passSigma: 1.12, miscontrol: 0.04, drain: 1.08, speed: 0.94 }, // мʼяч гальмує, гравці повільніші
+    night: { friction: 1, passSigma: 1.02, miscontrol: 0, drain: 1, speed: 1 }, // вечірній матч під прожекторами
+    clear: { friction: 1, passSigma: 1, miscontrol: 0, drain: 1, speed: 1 },
+  },
+
   upsetGap: 8, // різниця сили для «Сенсації туру»
 } as const;
 

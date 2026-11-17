@@ -7,7 +7,7 @@ import { go, useApp } from '../game/store';
 import { unitName } from '../systems/transfers';
 import { ResetFlow, TableView } from './screens';
 import { ChampionshipBadge, GoldConfetti, SupercupIcon, TrophyRevealAnimation, WinnerScreen } from './supercup';
-import { Btn, Coins, Logo } from './ui';
+import { Achievements, Btn, Coins, Logo } from './ui';
 
 export function Ceremony() {
   const { save } = useApp();
@@ -58,7 +58,7 @@ export function Ceremony() {
           <div className="stat"><span>В / Н / П</span><b>{w} / {d} / {rec.userResults.length - w - d}</b></div>
           <div className="stat"><span>Зароблено за сезон</span><b><Coins n={rec.coinsEarned} /></b></div>
         </div>
-        <div className="panel"><h3>Досягнення клубу</h3><div className="row wrap">{rec.achievements.map((a) => /Чемпіон/.test(a) ? <ChampionshipBadge key={a} label={a} /> : <span className="chip gold" key={a}>{a}</span>)}</div></div>
+        <div className="panel"><h3>Досягнення клубу</h3><Achievements list={rec.achievements} /></div>
         <div className="panel"><h3>Підсумкова таблиця</h3><TableView table={rec.table} me={s.userClub} champion={rec.champion} /></div>
         <div className="panel"><h3>Бомбардири й бомбардирки сезону</h3>{rec.topScorers[0] && <p className="gold" style={{ marginBottom: 10, fontWeight: 600 }}>⚽ {MSG.bestScorerSeason(person(rec.topScorers[0].name, rec.topScorers[0].special), rec.topScorers[0].goals)}</p>}<div className="evlist">{rec.topScorers.slice(0, 8).map((x, i) => <div key={i} style={{ alignItems: 'center' }}><span className="m">{x.goals} ⚽</span><Logo club={x.club} size={22} /><span><b>{x.name}</b> — {clubName(x.club)}</span></div>)}</div></div>
         <div className="panel"><h3>Трансфери сезону</h3>{rec.transfers.length === 0 ? <p className="muted">Гучних переходів не було.</p> : <div className="evlist">{rec.transfers.map((t, i) => <div key={i}><span className="m">Тур {t.round + 1}</span><span><b>{unitName(t.unitId)}</b> → {clubName(t.club)}{t.from ? ` (із «${clubName(t.from)}»)` : ''}</span></div>)}</div>}</div>

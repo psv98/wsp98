@@ -2,6 +2,7 @@
 import { useMemo, useRef, useState, type CSSProperties } from 'react';
 import { BALANCE as B } from '../data/balance';
 import { CLUBS, CLUB_BY_ID } from '../data/clubs';
+import { assetUrl } from '../game/assets';
 import { audio } from '../game/audio';
 import { clubName, fmtTime, lastResult, matchesWord, nextMatch, playerName, tableOf } from '../game/selectors';
 import { act, downloadSave, go, importFromFile, resetProgress, restoreBackup, resumeScreen, startNewGame, updateSettings, useApp } from '../game/store';
@@ -13,7 +14,7 @@ import type { MatchSummary, SaveState, TableRow, UserMatchRecord } from '../syst
 import { MSG, person } from '../data/i18n';
 import { fatigueColor } from '../simulation/fatigue';
 import { ChampionshipBadge, SupercupIcon, SupercupLogo } from './supercup';
-import { Btn, Coins, Icon, Logo, Modal, TopBar } from './ui';
+import { Achievements, Btn, Coins, Icon, Logo, Modal, TopBar } from './ui';
 
 // ---------- подвійне підтвердження скидання ----------
 export function ResetFlow({ onClose }: { onClose: () => void }) {
@@ -97,6 +98,7 @@ export function ClubSelect() {
 }
 
 // ---------- панель менеджера ----------
+const TILE_ICON: Partial<Record<string, string>> = { squad: 'squad', table: 'table', calendar: 'calendar', results: 'results', transfers: 'transfers', coins: 'coins', stats: 'stats', history: 'history', settings: 'settings' };
 export function Hub() {
   const { save } = useApp();
   const s = save!;
@@ -165,7 +167,7 @@ export function Hub() {
       <div className="menu-grid">
         {tiles.map(([t, sub, scr, dot]) => (
           <button type="button" key={t} className="tile" onClick={() => { audio.sfx('click'); go(scr); }}>
-            {dot && <i className="dot" />}<b>{t}</b><small>{sub}</small>
+            {dot && <i className="dot" />}<img className="tile-ic" src={assetUrl(`assets/art/icons/${TILE_ICON[scr] ?? 'settings'}.webp`)} alt="" width={56} height={56} /><span className="tile-tx"><b>{t}</b><small>{sub}</small></span>
           </button>
         ))}
       </div>
@@ -370,7 +372,7 @@ export function History() {
         {s.history.slice().reverse().map((h) => (
           <button type="button" className="panel" style={{ textAlign: 'left' }} key={h.season} onClick={() => setOpen(s.history.indexOf(h))}>
             <div className="row"><Logo club={h.champion} size={44} /><div className="grow"><b>Сезон {h.season}</b><div className="row wrap" style={{ gap: 6, marginTop: 2 }}><ChampionshipBadge small label={clubName(h.champion)} /></div></div><div className="center"><div className="muted" style={{ fontSize: 11 }}>Ваше місце</div><b style={{ fontFamily: 'var(--font-head)', fontSize: 22 }} className={h.userPos === 1 ? 'gold' : ''}>{h.userPos}</b></div></div>
-            <div className="row wrap" style={{ marginTop: 8 }}>{h.achievements.map((a) => /Чемпіон/.test(a) ? <ChampionshipBadge key={a} label={a} /> : <span className="chip gold" key={a}>{a}</span>)}</div>
+            <Achievements list={h.achievements} />
           </button>
         ))}
       </div>

@@ -110,7 +110,6 @@ export function Showcase({ rarity, head, sub, items, isUser, actions, onSkip, dr
   const done = shown >= items.length;
   // поки картку не відкрито — жодних підказок: нейтральні колір, рамка й заголовок
   const hidden = shown < 0;
-  const neutral = RARITY.common;
   return (
     <div className={`reveal ${hidden ? 'hidden-card' : rarity}`} style={{ '--rc': hidden ? '#ffffff' : r.color } as CSSProperties}>
       <div className="spot s1" /><div className="spot s2" />
@@ -119,7 +118,7 @@ export function Showcase({ rarity, head, sub, items, isUser, actions, onSkip, dr
       {hidden ? <div className="head">МЕГАТРАНСФЕР</div> : <div className="head" key="h">{head}</div>}
       {!hidden && sub && <div className="sub">{sub}</div>}
       <div className={`stage n${items.length}`}>
-        {shown < 0 && <div className="flip-wait"><div className="gcard"><div className="gc-frame gc-back" style={{ backgroundImage: `url(${assetUrl(neutral.frame)})` }}><span className="gc-qmark">?</span></div></div></div>}
+        {shown < 0 && <div className="flip-wait"><div className="gcard"><div className="gc-frame gc-back" style={{ backgroundImage: `url(${assetUrl('assets/art/cardback.webp')})` }} aria-label="Закрита картка" /></div></div>}
         {items.map((it, i) => i < Math.max(shown, 0) && (
           <div className="flip" key={i}>
             {it.special ? <PlayerCard sp={SPECIAL_BY_ID[it.special]} isUser={isUser} /> : <JackpotCard amount={it.jackpot ?? it.sponsor ?? 0} sponsor={it.sponsor != null} />}

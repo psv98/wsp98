@@ -4,7 +4,7 @@ import { CLUBS, CLUB_BY_ID } from '../data/clubs';
 import { SPECIAL_BY_ID } from '../data/specials';
 import { simulateMatch } from '../simulation/engine';
 import { hashSeed, makeRng, rndInt } from '../simulation/rng';
-import type { MatchResult, MatchSetup } from '../simulation/types';
+import type { MatchResult, MatchSetup, Weather } from '../simulation/types';
 import { closeOffseason } from './market';
 import { addCoins, aiMatchIncome, aiPrepareClubs, aiSeasonPrize, aiSponsor, clubCoins, matchRewards } from './economy';
 import { generateSchedule } from './schedule';
@@ -36,8 +36,16 @@ export function userFixture(state: SaveState, round = state.round): Fixture | nu
 
 export function matchSeed(state: SaveState, round: number, idx: number) { return hashSeed(state.seed, 's', state.season, 'r', round, 'm', idx); }
 
+/** Погода матчу: визначається заздалегідь (сезон + пара клубів), тож однакова на передматчевому екрані й у матчі. */
+export function weatherFor(state: SaveState, fx: Fixture): Weather {
+  const r = makeRng(hashSeed(state.seed, 'weather', state.season, fx.home, fx.away))();
+  let acc = 0;
+  for (const [w, p] of Object.entries(B.weather.chance) as [Weather, number][]) { acc += p; if (r < acc) return w; }
+  return 'clear';
+}
+
 export function buildMatchSetup(state: SaveState, fx: Fixture, seed: number): MatchSetup {
-  return { home: buildTeamSetup(state, fx.home, true), away: buildTeamSetup(state, fx.away, false), seed };
+  return { home: buildTeamSetup(state, fx.home, true), away: buildTeamSetup(state, fx.away, false), seed, weather: weatherFor(state, fx) };
 }
 
 /** Симуляція одного з «чужих» матчів туру тим самим рушієм. */
@@ -212,6 +220,10 @@ function finishSeason(state: SaveState) {
   if (big >= 4) ach.push(`Найбільша перемога з різницею +${big}`);
   const owned = Object.values(state.transfers.owners).filter((c) => c === state.userClub).length;
   if (owned >= 5) ach.push(`Колекціонер: ${owned} особливих гравців у складі`);
+  const hat = state.coinLog.filter((c) => c.season === state.season && /^Хет-трик/.test(c.reason)).length;
+  if (hat > 0) ach.push(hat > 1 ? `Хет-трики сезону: ${hat}` : 'Хет-трик сезону');
+  const comebacks = state.coinLog.filter((c) => c.season === state.season && c.reason === 'Вольова перемога').length;
+  if (comebacks >= 2) ach.push(`Вольові перемоги: ${comebacks}`);
   if (!ach.length) ach.push('Сезон завершено');
   state.history.push({
     season: state.season, champion: table[0].id, table, userPos: pos, userPts: row.pts, topScorers: scorers.slice(0, 10),

@@ -30,6 +30,7 @@ export function eventLine(e: MatchEvent, clubs: [string, string]): Line | null {
     case 'halftime': return { text: 'Перерва', tone: 'info' };
     case 'secondHalf': return { text: 'Починається другий тайм', tone: 'info' };
     case 'fulltime': return { text: 'Фінальний свисток!', tone: 'info' };
+    case 'order': return e.text === 'attack' ? { text: `«${club}»: усі в атаку!`, tone: 'special', big: true } : e.text === 'press' ? { text: `«${club}» вмикає пресинг!`, tone: 'special', big: true } : { text: `«${club}» сідає в оборону`, tone: 'info', big: true };
     case 'golden': return { text: `«Золота хвилина»! «${club}» йде у навалу`, tone: 'special', big: true };
     case 'lastAttack': return { text: `«Остання атака»! «${club}» має шанс`, tone: 'special', big: true };
     case 'scissors': return { text: `«Європейські ножиці»! ${who} бʼє через себе!`, tone: 'special', big: true };

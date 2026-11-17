@@ -13,9 +13,9 @@ import { MSG, genderOf, person, w } from '../data/i18n';
 import { act, commit, getState, go, toast, useApp } from '../game/store';
 import { MatchEngine } from '../simulation/engine';
 import { hashSeed } from '../simulation/rng';
-import type { MatchResult, SimPlayer, TeamStats } from '../simulation/types';
+import type { MatchResult, OrderKind, SimPlayer, TeamStats, Weather } from '../simulation/types';
 import { ackPostMatch, claimCard, treatPlayer } from '../systems/actions';
-import { ROUNDS, applyRound, buildMatchSetup, matchSeed, simulateFixture, userFixture } from '../systems/season';
+import { ROUNDS, applyRound, buildMatchSetup, matchSeed, simulateFixture, userFixture, weatherFor } from '../systems/season';
 import { buildTeamSetup, treatCost } from '../systems/squad';
 import { unitName } from '../systems/transfers';
 import { Showcase, unitItems } from './cards';
@@ -69,6 +69,7 @@ export function PreMatch() {
           <Btn onClick={() => go('hub')}>Назад</Btn><Btn onClick={() => go('squad')}>Змінити склад</Btn>
           <Btn kind="primary big" onClick={() => go('match')}>ПОЧАТИ МАТЧ</Btn>
         </div>
+        {(() => { const wx = WEATHER[weatherFor(s, fx)]; return <p className="center" style={{ marginTop: 10 }}><span className="chip wx-chip" title={wx.hint}>{wx.icon} {wx.label}</span>{wx.label !== 'Ясно' && <span className="muted" style={{ fontSize: 12.5, marginLeft: 8 }}>{wx.hint}</span>}</p>; })()}
         {home.stormArmed || away.stormArmed ? <p className="center gold" style={{ marginTop: 10, fontSize: 13 }}>Ігор Ісиченко сьогодні в особливому настрої: можливий «Повітряний штурм»…</p> : null}
       </div>
       <div className="squad"><div className="panel"><h3>{home.name}</h3>{list(home)}</div><div className="panel"><h3>{away.name}</h3>{list(away)}</div></div>
@@ -77,6 +78,17 @@ export function PreMatch() {
 }
 
 // ---------- живий матч ----------
+export const WEATHER: Record<Weather, { label: string; icon: string; hint: string }> = {
+  clear: { label: 'Ясно', icon: '☀', hint: 'Звичайні умови' },
+  night: { label: 'Вечірній матч', icon: '🌙', hint: 'Гра під прожекторами' },
+  rain: { label: 'Дощ', icon: '🌧', hint: 'Мʼяч ковзає далі, передачі неточніші, гравці швидше втомлюються' },
+  snow: { label: 'Сніг', icon: '❄', hint: 'Мʼяч гальмує, гравці повільніші та швидше втомлюються' },
+};
+const ORDERS: { kind: OrderKind; label: string; icon: string; hint: string }[] = [
+  { kind: 'attack', label: 'Атака', icon: '⚔', hint: 'Команда піднімається вище й частіше бʼє. Більше витрата сил' },
+  { kind: 'press', label: 'Пресинг', icon: '⚡', hint: 'Двоє гравців тиснуть по всьому полю. Сильна втома й більше фолів' },
+  { kind: 'hold', label: 'Захист', icon: '🛡', hint: 'Низький блок, менше ризику, економія сил' },
+];
 const DT = B.match.dt;
 function liveStats(m: MatchEngine): [TeamStats, TeamStats] {
   const t = m.stats[0].possession + m.stats[1].possession || 1;
@@ -98,7 +110,7 @@ export function MatchScreen() {
   const boxRef = useRef<HTMLDivElement>(null);
   const rendRef = useRef<PitchRenderer | null>(null);
   const paused = useRef(false);
-  const speed = useRef(2); // швидкості ×2 (за замовчуванням) і ×4
+  const speed = useRef(4); // швидкості ×4 (за замовчуванням) і ×2
   const [, force] = useState(0);
   const [lines, setLines] = useState<{ min: string; line: Line }[]>([]);
   const [banner, setBanner] = useState<{ line: Line; key: number } | null>(null);
@@ -118,6 +130,7 @@ export function MatchScreen() {
     stars.push('assets/imi/imi-user.png', 'assets/imi/imi-opp.png');
     const rend = new PitchRenderer(canvas, [{ logo: CLUB_BY_ID[fx.home].logo, color: colors[0], isUser: userTeam === 0 }, { logo: CLUB_BY_ID[fx.away].logo, color: colors[1], isUser: userTeam === 1 }], stars);
     rend.low = settings.lowGfx;
+    rend.setWeather(engine.weather);
     rendRef.current = rend;
     const ro = new ResizeObserver(() => rend.resize(box.clientWidth, box.clientHeight));
     ro.observe(box);
@@ -135,7 +148,7 @@ export function MatchScreen() {
         bannerT = window.setTimeout(() => setBanner(null), line.tone === 'goal' ? 2800 : 2300);
       }
       if (e.type === 'goal' || e.type === 'ownGoal') rend.goalFlash(colors[e.team as 0 | 1]);
-      if (e.type === 'golden' || e.type === 'storm' || e.type === 'lastAttack' || e.type === 'var') audio.sfx('special');
+      if (e.type === 'golden' || e.type === 'storm' || e.type === 'lastAttack' || e.type === 'var' || (e.type === 'order' && e.team === userTeam)) audio.sfx('special');
       if (e.type === 'goal' && e.text === 'scissors') audio.sfx('scissorsGoal');
       if (e.type === 'miss') audio.sfx('groan');
     };
@@ -159,7 +172,8 @@ export function MatchScreen() {
         const dg = Math.min(Math.hypot(b.x, b.y - 34), Math.hypot(105 - b.x, b.y - 34));
         audio.excitement(engine.phase === 'play' ? Math.max(0, 1 - dg / 45) : engine.phase === 'wait' ? 0.6 : 0.1);
       }
-      const key = `${engine.score[0]}:${engine.score[1]}|${engine.minLabel()}|${engine.phase}|${engine.teams[userTeam].subsLeft}|${engine.teams[userTeam].subQueue.length}`;
+      const ut = engine.teams[userTeam];
+      const key = `${engine.score[0]}:${engine.score[1]}|${engine.minLabel()}|${engine.phase}|${ut.subsLeft}|${ut.subQueue.length}|${ut.order?.kind ?? ''}${Math.ceil(ut.order?.left ?? 0)}|${Math.ceil(ut.orderCd)}`;
       if (key !== hudKey) { hudKey = key; force((x) => x + 1); }
     };
     raf = requestAnimationFrame(loop);
@@ -223,13 +237,30 @@ export function MatchScreen() {
         <div className="tm" style={{ '--tc': colors[0] } as CSSProperties}><Logo club={fx.home} size={38} /><span className="ell nm-full">{names[0]}</span><span className="nm-abbr">{CLUB_BY_ID[fx.home].abbr}</span>{userTeam === 0 && <span className="you">ВИ</span>}</div>
         <div className="mid">
           <div className="score" aria-label={`Рахунок ${engine.score[0]}:${engine.score[1]}`}><b key={`h${engine.score[0]}`} className={engine.score[0] ? 'bump' : ''}>{engine.score[0]}</b><i>:</i><b key={`a${engine.score[1]}`} className={engine.score[1] ? 'bump' : ''}>{engine.score[1]}</b></div>
-          <div className="clock">{engine.minLabel()}' · {halfLabel}</div>
+          <div className="clock">{engine.minLabel()}' · {halfLabel}{engine.weather !== 'clear' && <span className="wx" title={WEATHER[engine.weather].label}> · {WEATHER[engine.weather].icon}</span>}</div>
         </div>
         <div className="tm r" style={{ '--tc': colors[1] } as CSSProperties}>{userTeam === 1 && <span className="you">ВИ</span>}<span className="ell nm-full">{names[1]}</span><span className="nm-abbr">{CLUB_BY_ID[fx.away].abbr}</span><Logo club={fx.away} size={38} /></div>
       </div>
       <div className="mcanvas" ref={boxRef}>
         <canvas ref={canvasRef} />
         {userPaused && !panel && !engine.finished && engine.phase !== 'half' && <div className="banner info">Пауза</div>}
+        {!engine.finished && engine.phase !== 'half' && (
+          <div className="orders" role="group" aria-label="Вказівки з бровки">
+            {ORDERS.map((o) => {
+              const t = engine.teams[userTeam];
+              const active = t.order?.kind === o.kind;
+              const busy = !!t.order || t.orderCd > 0;
+              const frac = active ? t.order!.left / B.orders.duration : !t.order && t.orderCd > 0 ? 1 - t.orderCd / B.orders.cooldown : 1;
+              return (
+                <button type="button" key={o.kind} className={`order ${o.kind} ${active ? 'on' : ''}`} disabled={busy && !active} title={o.hint}
+                  aria-label={`${o.label}: ${o.hint}`} style={{ '--p': `${Math.round(frac * 360)}deg` } as CSSProperties}
+                  onClick={() => { audio.unlock(); if (engine.giveOrder(userTeam, o.kind)) force((x) => x + 1); }}>
+                  <span className="ic" aria-hidden="true">{o.icon}</span><span className="lb">{o.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
         {banner && <div key={banner.key} className={`banner ${tone}`}>{banner.line.text.split('. ')[0]}{banner.line.text.includes('. ') && <small>{banner.line.text.split('. ').slice(1).join('. ')}</small>}</div>}
         {engine.phase === 'var' && engine.pendingVar && (
           <div className="mpanel"><div className="box center">
@@ -324,7 +355,7 @@ export function PostMatch() {
       const it = unitItems(c.unitId);
       return <Showcase rarity={it.rarity} isUser head={it.head} sub={c.from ? `Сюжетний перехід! ${unitName(c.unitId)} залишає «${clubName(c.from)}» і приєднується до вас.` : c.unitId === 'oksana' ? 'Вихованка клубу повертається додому — тепер вона грає за вас.' : it.sub} items={it.items} onSkip={() => undefined}
         footerNote="У вашому клубі здібності діють на повну силу."
-        actions={<><Btn kind="primary" onClick={() => { if (act((st) => claimCard(st, true), c.unitId === 'trio' || c.unitId === 'duo' ? 'Комплект додано до стартового складу!' : `${unitName(c.unitId)} — у стартовому складі!`)) setReveal(false); }}>Одразу в основу</Btn><Btn onClick={() => { if (act((st) => claimCard(st, false), c.unitId === 'trio' || c.unitId === 'duo' ? 'Комплект додано до заявки (резерв)' : `${unitName(c.unitId)} — у заявці (резерв)`)) setReveal(false); }}>Додати до команди (резерв)</Btn></>} />;
+        actions={<Btn kind="primary" onClick={() => { if (act((st) => claimCard(st, true), c.unitId === 'trio' || c.unitId === 'duo' ? 'Комплект додано до стартового складу!' : `${unitName(c.unitId)} — у стартовому складі!`)) setReveal(false); }}>Поставити в основний склад</Btn>} />;
     }
     return <Showcase rarity={c.kind === 'jackpot' ? 'divine' : 'rare'} isUser head={c.kind === 'jackpot' ? 'ФІНАНСОВИЙ ДЖЕКПОТ ІМІ' : 'ТРАНСФЕРНА ПОДІЯ'} sub={c.kind === 'jackpot' ? 'Трансферний бюджет погоджено!' : 'Цього разу без нового гравця — зате партнери клубу поповнили бюджет.'}
       items={[c.kind === 'jackpot' ? { jackpot: c.amount } : { sponsor: c.amount }]} onSkip={() => undefined}

@@ -13,6 +13,12 @@ export interface RenderTeam { logo: string; color: string; isUser?: boolean }
 // На полі персонажі ІМІ мають окремі емблеми: біла літера — команда гравця, жовта — команда суперника.
 const IMI_USER = 'assets/imi/imi-user.png';
 const IMI_OPP = 'assets/imi/imi-opp.png';
+// Текстури стадіону (вид зверху): газон і трибуни з прозорим центром
+const PITCH_TEX = 'assets/art/pitch.webp';
+const STANDS_TEX = 'assets/art/stands.webp';
+/** Внутрішній прозорий прямокутник у текстурі трибун (частки ширини/висоти) */
+const STANDS_INNER = { x0: 0.0924, y0: 0.124, x1: 0.9082, y1: 0.874 };
+type WeatherKind = 'clear' | 'night' | 'rain' | 'snow';
 
 function mulberry(a: number) {
   return () => { a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
@@ -29,17 +35,29 @@ export class PitchRenderer {
   private flash = 0; private flashColor = '#fff';
   private destroyed = false;
   low = false;
+  private weather: WeatherKind = 'clear';
+  private drops: { x: number; y: number; v: number; l: number }[] = [];
 
   constructor(private canvas: HTMLCanvasElement, private teams: [RenderTeam, RenderTeam], extraImgs: string[]) {
     this.ctx = canvas.getContext('2d', { alpha: false })!;
     for (const path of [teams[0].logo, teams[1].logo, IMI_USER, IMI_OPP, ...extraImgs]) {
       loadImage(path).then((img) => { if (!this.destroyed) { this.imgs.set(path, img); this.sprites.clear(); } }).catch(() => undefined);
     }
+    for (const path of [PITCH_TEX, STANDS_TEX]) {
+      loadImage(path).then((img) => { if (!this.destroyed) { this.imgs.set(path, img); if (this.w) this.buildStatic(); } }).catch(() => undefined);
+    }
   }
 
   destroy() {
     this.destroyed = true;
     this.sprites.clear(); this.imgs.clear(); this.bg = null; this.crowd = [];
+  }
+
+  setWeather(w: WeatherKind) {
+    this.weather = w;
+    const n = w === 'rain' ? 140 : w === 'snow' ? 90 : 0;
+    this.drops = Array.from({ length: n }, () => ({ x: Math.random(), y: Math.random(), v: 0.6 + Math.random() * 0.8, l: 0.5 + Math.random() }));
+    if (this.w) this.buildStatic();
   }
 
   setLow(low: boolean) { if (this.low !== low) { this.low = low; this.resize(this.w, this.h); } }
@@ -82,10 +100,21 @@ export class PitchRenderer {
     g.fillStyle = '#143a2d';
     g.fillRect(-m, -m, L + 2 * m, m - 1); g.fillRect(-m, W + 1, L + 2 * m, m - 1);
     g.fillRect(-m, -m, m - 1, W + 2 * m); g.fillRect(L + 1, -m, m - 1, W + 2 * m);
-    // газон зі смугами
-    const stripes = 14;
-    for (let i = 0; i < stripes; i++) { g.fillStyle = i % 2 ? '#2f8f46' : '#2a8540'; g.fillRect((i * L) / stripes, 0, L / stripes + 0.05, W); }
-    g.fillStyle = '#256f38'; g.fillRect(-1, -1, L + 2, 1); g.fillRect(-1, W, L + 2, 1); g.fillRect(-1, -1, 1, W + 2); g.fillRect(L, -1, 1, W + 2);
+    // газон: текстура з смугами скошування (або намальовані смуги, поки текстура вантажиться)
+    const tex = this.imgs.get(PITCH_TEX);
+    g.fillStyle = '#2a8540'; g.fillRect(-2.6, -1.8, L + 5.2, W + 3.6);
+    if (tex) g.drawImage(tex, -2.6, -1.8, L + 5.2, W + 3.6);
+    else {
+      const stripes = 14;
+      for (let i = 0; i < stripes; i++) { g.fillStyle = i % 2 ? '#2f8f46' : '#2a8540'; g.fillRect((i * L) / stripes, 0, L / stripes + 0.05, W); }
+    }
+    // трибуни навколо поля: внутрішній прозорий прямокутник текстури збігається з газоном
+    const stands = this.imgs.get(STANDS_TEX);
+    if (stands) {
+      const I = STANDS_INNER, iw = L + 5.2, ih = W + 3.6;
+      const fw = iw / (I.x1 - I.x0), fh = ih / (I.y1 - I.y0);
+      g.drawImage(stands, -2.6 - I.x0 * fw, -1.8 - I.y0 * fh, fw, fh);
+    }
     // розмітка
     g.strokeStyle = 'rgba(255,255,255,.92)'; g.lineWidth = Math.max(0.16, 1.3 / s); g.lineJoin = 'miter';
     g.strokeRect(0, 0, L, W);
@@ -122,11 +151,26 @@ export class PitchRenderer {
       vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,10,20,.28)');
       g.fillStyle = vg; g.fillRect(-m, -m, L + 2 * m, W + 2 * m);
     }
+    if (this.weather === 'night' || this.weather === 'rain' || this.weather === 'snow') {
+      // вечірній матч: темніше довкола, яскраві плями прожекторів на газоні
+      const dark = this.weather === 'night' ? 0.42 : 0.22;
+      g.fillStyle = `rgba(2,8,18,${dark})`; g.fillRect(-m - 20, -m - 20, L + 2 * m + 40, W + 2 * m + 40);
+      if (this.weather === 'night') {
+        g.globalCompositeOperation = 'lighter';
+        for (const [lx, ly] of [[-4, -4], [L + 4, -4], [-4, W + 4], [L + 4, W + 4], [L / 2, -6], [L / 2, W + 6]]) {
+          const gr = g.createRadialGradient(lx, ly, 2, lx, ly, 46);
+          gr.addColorStop(0, 'rgba(255,248,205,.2)'); gr.addColorStop(0.45, 'rgba(255,248,205,.06)'); gr.addColorStop(1, 'rgba(255,248,205,0)');
+          g.fillStyle = gr; g.fillRect(-m, -m, L + 2 * m, W + 2 * m);
+        }
+        g.globalCompositeOperation = 'source-over';
+      }
+      if (this.weather === 'snow') { g.fillStyle = 'rgba(235,245,255,.13)'; g.fillRect(0, 0, L, W); }
+    }
     g.restore();
     this.bg = c;
     // два кадри вболівальників для дешевої анімації трибун
     this.crowd = [];
-    const frames = this.low ? 1 : 2;
+    const frames = this.imgs.get(STANDS_TEX) ? 0 : this.low ? 1 : 2;
     for (let f = 0; f < frames; f++) {
       const cc = document.createElement('canvas');
       cc.width = c.width; cc.height = c.height;
@@ -263,6 +307,29 @@ export class PitchRenderer {
       g.fillStyle = '#1a1a1a';
       const a = b.spin * 0.9;
       for (let k = 0; k < 3; k++) { const aa = a + (k * Math.PI * 2) / 3; g.beginPath(); g.arc(x + Math.cos(aa) * br * 0.45, y + Math.sin(aa) * br * 0.45, br * 0.24, 0, Math.PI * 2); g.fill(); }
+    }
+    // дощ і сніг поверх поля
+    if (this.drops.length) {
+      const n = this.low ? Math.floor(this.drops.length / 3) : this.drops.length;
+      const t = now / 1000;
+      g.save();
+      if (this.weather === 'rain') {
+        g.strokeStyle = 'rgba(190,215,255,.45)'; g.lineWidth = 1.2; g.beginPath();
+        for (let i = 0; i < n; i++) {
+          const d = this.drops[i];
+          const y = ((d.y + t * d.v * 1.6) % 1) * this.h, x = ((d.x + t * 0.05) % 1) * this.w, len = 10 + d.l * 10;
+          g.moveTo(x, y); g.lineTo(x - len * 0.25, y + len);
+        }
+        g.stroke();
+      } else {
+        g.fillStyle = 'rgba(255,255,255,.85)';
+        for (let i = 0; i < n; i++) {
+          const d = this.drops[i];
+          const y = ((d.y + t * d.v * 0.12) % 1) * this.h, x = ((d.x + Math.sin(t * 0.8 + i) * 0.01 + t * 0.01) % 1) * this.w;
+          g.beginPath(); g.arc(x, y, 1.2 + d.l * 1.4, 0, Math.PI * 2); g.fill();
+        }
+      }
+      g.restore();
     }
     if (this.flash > 0) {
       g.globalAlpha = this.flash * 0.35; g.fillStyle = this.flashColor; g.fillRect(0, 0, this.w, this.h); g.globalAlpha = 1;
