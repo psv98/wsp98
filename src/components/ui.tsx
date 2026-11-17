@@ -3,6 +3,7 @@ import { useEffect, type CSSProperties, type ReactNode } from 'react';
 import { CLUB_BY_ID } from '../data/clubs';
 import { RARITY, type Rarity } from '../data/rarity';
 import { assetUrl } from '../game/assets';
+import { fatigueColor } from '../simulation/fatigue';
 import { audio } from '../game/audio';
 import { go, useApp, type Screen } from '../game/store';
 
@@ -72,7 +73,7 @@ export function Modal({ children, onClose, wide }: { children: ReactNode; onClos
 }
 
 export function StaminaBar({ v }: { v: number }) {
-  return <div className="sbar" title={`Витривалість ${Math.round(v)}%`}><i className={v < 45 ? 'low' : v < 70 ? 'mid' : ''} style={{ width: `${Math.max(3, v)}%` }} /></div>;
+  return <div className="sbar" title={`Витривалість ${Math.round(v)}%`}><i className={`c-${fatigueColor(v)}`} style={{ width: `${Math.max(3, v)}%` }} /></div>;
 }
 
 export function Toast() {

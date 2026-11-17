@@ -8,7 +8,13 @@ export interface PlayerInit {
   q: number; // базовий рейтинг (для особливих береться з конфігурації здібностей)
   stamina: number; // 0..100
   special?: string;
+  /** Прибавка до рейтингу від розвитку між сезонами */
+  qBonus?: number;
+  /** Бонуси обраних напрямів розвитку */
+  boost?: Partial<Record<BoostKey, number>>;
 }
+
+export type BoostKey = 'shoot' | 'pass' | 'dribble' | 'tackle' | 'header' | 'gk' | 'speed' | 'block' | 'intercept';
 
 export interface TeamSetup {
   clubId: string;
@@ -85,6 +91,8 @@ export interface SimPlayer {
   hx: number; hy: number; // напрямок погляду
   force: { x: number; y: number } | null;
   stamina0: number; stamina: number; drain: number; timeOn: number;
+  dist: number; sprintDist: number; // пробіг і ривки за матч (метри)
+  boost: Partial<Record<BoostKey, number>>;
   on: boolean; off: null | 'sub' | 'red' | 'inj'; played: boolean;
   stun: number; tackleCd: number; decideT: number; holdT: number; immune: number;
   yellow: number; red: 0 | 1 | 2; injury: number;

@@ -31,5 +31,7 @@ if (process.argv[3]) {
   run('user full IMI vs top', () => mkTeam('a', mid, true, { 0: 'ihor', 9: 'oksana', 2: 'zakhar', 3: 'dudka', 5: 'mashkova', 6: 'barkar', 7: 'holub', 8: 'zemliana', 10: 'ihnatieva' }), () => mkTeam('b', top), N);
   run('user+Hanna vs mid', () => mkTeam('a', mid, true, { 9: 'hanna' }), () => mkTeam('b', mid), N);
   run('user 6 epic/rare vs top', () => mkTeam('a', mid, true, { 2: 'zakhar', 3: 'dudka', 5: 'troian', 8: 'zemliana', 10: 'ihnatieva', 7: 'diachuk' }), () => mkTeam('b', top), N);
+  run('tired(60) vs fresh', () => mkTeam('a', mid, false, {}, 60), () => mkTeam('b', mid), N);
   run('tired(40) vs fresh', () => mkTeam('a', mid, false, {}, 40), () => mkTeam('b', mid), N);
+  run('tired(20) vs fresh', () => mkTeam('a', mid, false, {}, 20), () => mkTeam('b', mid), N);
 }

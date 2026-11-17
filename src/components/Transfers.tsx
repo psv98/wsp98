@@ -4,6 +4,7 @@ import { BALANCE as B } from '../data/balance';
 import { RARITY } from '../data/rarity';
 import { BUNDLES, IMI_SPECIALS, STARS } from '../data/specials';
 import { clubName } from '../game/selectors';
+import { MSG, person } from '../data/i18n';
 import { act, useApp } from '../game/store';
 import { buyStar } from '../systems/actions';
 import { marketOpen, unitName } from '../systems/transfers';
@@ -45,7 +46,7 @@ export function Transfers() {
               : (<><h2>Ринок закрито 🔒</h2><p className="muted">Трансферний ринок світових зірок відкриває лише секретна подія «Фінансовий джекпот ІМІ», яка може випасти після матчу.</p></>)}
           </div>
           <div className="cardgrid market">
-            {STARS.map((sp) => { const o = owners[sp.id]; return <div key={sp.id} style={open ? undefined : { filter: 'grayscale(.7) brightness(.7)' }}><MarketCard sp={sp} owned={o === s.userClub} soldTo={o && o !== s.userClub ? clubName(o) : undefined} canBuy={open && s.coins >= (sp.price ?? 0)} onBuy={() => act((st) => buyStar(st, sp.id), `${sp.name} приєднався до вашого клубу!`)} /></div>; })}
+            {STARS.map((sp) => { const o = owners[sp.id]; return <div key={sp.id} style={open ? undefined : { filter: 'grayscale(.7) brightness(.7)' }}><MarketCard sp={sp} owned={o === s.userClub} soldTo={o && o !== s.userClub ? clubName(o) : undefined} canBuy={open && s.coins >= (sp.price ?? 0)} onBuy={() => act((st) => buyStar(st, sp.id), MSG.joinedClub(person(sp.name, sp.id)))} /></div>; })}
           </div>
         </>)}
         {tab === 2 && (

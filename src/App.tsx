@@ -10,9 +10,10 @@ import { boot, go, useApp, type Screen } from './game/store';
 const MatchScreen = lazy(() => import('./components/MatchFlow').then((m) => ({ default: m.MatchScreen })));
 const PreMatch = lazy(() => import('./components/MatchFlow').then((m) => ({ default: m.PreMatch })));
 const PostMatch = lazy(() => import('./components/MatchFlow').then((m) => ({ default: m.PostMatch })));
+const Offseason = lazy(() => import('./components/Offseason').then((m) => ({ default: m.Offseason })));
 const Ceremony = lazy(() => import('./components/Ceremony').then((m) => ({ default: m.Ceremony })));
 
-const NEED_SAVE: Screen[] = ['hub', 'squad', 'table', 'calendar', 'results', 'transfers', 'coins', 'stats', 'history', 'prematch', 'match', 'post', 'ceremony'];
+const NEED_SAVE: Screen[] = ['hub', 'squad', 'table', 'calendar', 'results', 'transfers', 'coins', 'stats', 'history', 'prematch', 'match', 'post', 'ceremony', 'offseason'];
 
 export function App() {
   const app = useApp();
@@ -51,6 +52,7 @@ export function App() {
     case 'match': view = <MatchScreen />; break;
     case 'post': view = <PostMatch />; break;
     case 'ceremony': view = <Ceremony />; break;
+    case 'offseason': view = <Offseason />; break;
   }
   return <div className={`app ${app.settings.lowGfx ? 'lowgfx' : ''}`}><Suspense fallback={<div className="page muted center">Завантаження…</div>}>{view}</Suspense><Toast /></div>;
 }

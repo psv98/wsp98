@@ -6,7 +6,7 @@ import { FORMATIONS } from '../data/formations';
 import { SPECIAL_BY_ID, STARS, TRANSFER_UNITS, type TransferUnit } from '../data/specials';
 import type { Rng } from '../simulation/rng';
 import { weightedPick } from '../simulation/rng';
-import { genericPlayer } from './squad';
+import { autoLineup, genericPlayer } from './squad';
 import type { CardDrop, ClubState, PlayerState, SaveState, TransferLogEntry } from './types';
 
 const T = B.transfers;
@@ -16,7 +16,15 @@ export const OKSANA_HOME = 'suspilne';
 export const UNIT_BY_ID: Record<string, TransferUnit> = Object.fromEntries(TRANSFER_UNITS.map((u) => [u.id, u]));
 for (const s of STARS) UNIT_BY_ID[s.id] = { id: s.id, rarity: s.rarity, members: [s.id] };
 
-export const unitOwner = (state: SaveState, unit: TransferUnit): string | null => state.transfers.owners[unit.members[0]] ?? null;
+/** Власник одиниці трансферного пулу. Для комплекту — лише якщо всі учасники в одному клубі. */
+export const unitOwner = (state: SaveState, unit: TransferUnit): string | null => {
+  const owners = unit.members.map((m) => state.transfers.owners[m] ?? null);
+  return owners.every((o) => o === owners[0]) ? owners[0] : null;
+};
+/** Жоден учасник одиниці ще не має клубу. */
+export const unitFree = (state: SaveState, unit: TransferUnit) => unit.members.every((m) => !state.transfers.owners[m]);
+/** Учасники комплекту розкидані між клубами (після міжсезонних купівель) — такий комплект більше не випадає. */
+const unitSplit = (state: SaveState, unit: TransferUnit) => !unitFree(state, unit) && !unitOwner(state, unit);
 
 function unitAllowedByLock(state: SaveState, unit: TransferUnit): boolean {
   if (!unit.bundle) return true;
@@ -28,9 +36,10 @@ function unitAllowedByLock(state: SaveState, unit: TransferUnit): boolean {
 export function userCandidates(state: SaveState): { unit: TransferUnit; steal: boolean }[] {
   const res: { unit: TransferUnit; steal: boolean }[] = [];
   for (const unit of TRANSFER_UNITS) {
+    if (unit.members.some((m) => state.transfers.owners[m] === state.userClub)) continue; // без дублікатів
+    if (unitSplit(state, unit)) continue;
     const owner = unitOwner(state, unit);
-    if (owner === state.userClub) continue; // без дублікатів
-    if (!owner && !unitAllowedByLock(state, unit)) continue; // взаємовиключний комплект цього сезону
+    if (!owner && !unitAllowedByLock(state, unit)) continue; // взаємовиключний комплект цього сезону (лише для випадкових мегатрансферів)
     res.push({ unit, steal: !!owner });
   }
   return res;
@@ -80,7 +89,7 @@ function removeSpecial(state: SaveState, clubId: string, specialId: string) {
   club.megaTransfers = club.megaTransfers.filter((x) => x !== specialId);
 }
 
-function addSpecial(state: SaveState, clubId: string, specialId: string) {
+function addSpecial(state: SaveState, clubId: string, specialId: string, carry?: Pick<PlayerState, 'dev' | 's' | 'stamina' | 'injured' | 'suspended' | 'yellows'>) {
   const club = state.clubs[clubId];
   const sp = SPECIAL_BY_ID[specialId];
   const inXI = new Set(club.lineup);
@@ -91,8 +100,32 @@ function addSpecial(state: SaveState, clubId: string, specialId: string) {
   if (!target) return;
   target.special = specialId; target.role = sp.role; target.q = sp.opp.q; target.stamina = 100; target.injured = 0; target.suspended = 0; target.yellows = 0;
   target.s = { apps: 0, goals: 0, assists: 0, yc: 0, rc: 0, saves: 0, motm: 0 };
+  target.dev = undefined;
+  if (carry) {
+    // міжсезонний перехід: гравець зберігає розвиток, статистику й фізичний стан
+    target.dev = carry.dev ? JSON.parse(JSON.stringify(carry.dev)) : undefined;
+    target.s = { ...carry.s }; target.stamina = carry.stamina; target.injured = carry.injured; target.suspended = carry.suspended; target.yellows = carry.yellows;
+  }
   if (!club.megaTransfers.includes(specialId)) club.megaTransfers.push(specialId);
   state.transfers.owners[specialId] = clubId;
+}
+
+/** Знаходить запис гравця-персонажа в клубі. */
+export function findSpecial(state: SaveState, specialId: string): { clubId: string; player: PlayerState } | null {
+  const clubId = state.transfers.owners[specialId];
+  if (!clubId) return null;
+  const player = state.clubs[clubId]?.players.find((p) => p.special === specialId);
+  return player ? { clubId, player } : null;
+}
+
+/** Переводить одного персонажа до іншого клубу, зберігаючи його розвиток. Не дублює: у попереднього клубу він зникає. */
+export function moveSpecial(state: SaveState, specialId: string, toClub: string) {
+  const cur = findSpecial(state, specialId);
+  if (cur?.clubId === toClub) return;
+  const carry = cur ? { dev: cur.player.dev, s: cur.player.s, stamina: cur.player.stamina, injured: cur.player.injured, suspended: cur.player.suspended, yellows: cur.player.yellows } : undefined;
+  if (cur) removeSpecial(state, cur.clubId, specialId);
+  addSpecial(state, toClub, specialId, carry);
+  if (toClub !== state.userClub) state.clubs[toClub].lineup = autoLineup(state.clubs[toClub], false);
 }
 
 /** Передає персонажа або комплект клубу. Унікальний персонаж не може грати за два клуби одночасно. */
@@ -102,8 +135,7 @@ export function giveUnit(state: SaveState, clubId: string, unitId: string, kind:
   for (const m of unit.members) {
     const prev = state.transfers.owners[m];
     if (prev === clubId) continue;
-    if (prev) removeSpecial(state, prev, m);
-    addSpecial(state, clubId, m);
+    if (prev) moveSpecial(state, m, clubId); else addSpecial(state, clubId, m);
   }
   if (unit.bundle) state.transfers.legendaryLock = unit.bundle;
   const entry: TransferLogEntry = { season: state.season, round: state.round, club: clubId, unitId, from: from && from !== clubId ? from : undefined, kind: from && from !== clubId ? 'steal' : kind };
@@ -136,7 +168,7 @@ export function aiTransfers(state: SaveState, rng: Rng, reserved?: string): Tran
   const out: TransferLogEntry[] = [];
   const roundNo = state.round + 1; // номер щойно зіграного туру
   const aiClubs = Object.keys(state.clubs).filter((id) => id !== state.userClub);
-  const free = () => TRANSFER_UNITS.filter((u) => u.id !== reserved && u.id !== 'oksana' && !unitOwner(state, u) && unitAllowedByLock(state, u));
+  const free = () => TRANSFER_UNITS.filter((u) => u.id !== reserved && u.id !== 'oksana' && unitFree(state, u) && unitAllowedByLock(state, u));
   const clubsWithout = () => { const c = aiClubs.filter((id) => state.clubs[id].megaTransfers.length === 0); return c.length ? c : aiClubs; };
   if (roundNo >= T.aiFromRound) {
     if (state.transfers.aiCount < T.aiMaxPerSeason && rng() < T.aiRoundChance) {

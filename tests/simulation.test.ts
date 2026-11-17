@@ -93,23 +93,39 @@ describe('суперздібності', () => {
     expect(m.goalProb(ok, k, 15, 34, false, false).pGoal).toBe(1);
   });
 
-  it('Оксана в клубі суперника: 50%, а проти Ігоря користувача — значно менше', () => {
+  it('Оксана в клубі суперника: 50% звичайному воротарю, проти Ігоря користувача — лише 25%', () => {
     const m = new MatchEngine({ home: mkTeam('a', 75, true, { 0: 'ihor' }), away: mkTeam('b', 75, false, { 9: 'oksana' }), seed: 1 });
     const ok = m.players.find((p) => p.sp?.id === 'oksana')!;
-    expect(m.goalProb(ok, m.keeper(0), 15, 34, false, false).pGoal).toBeLessThanOrEqual(0.2);
+    expect(m.goalProb(ok, m.keeper(0), 15, 34, false, false).pGoal).toBe(0.25);
     const m2 = new MatchEngine({ home: mkTeam('a', 75, true), away: mkTeam('b', 75, false, { 9: 'oksana' }), seed: 1 });
     const ok2 = m2.players.find((p) => p.sp?.id === 'oksana')!;
     expect(m2.goalProb(ok2, m2.keeper(0), 15, 34, false, false).pGoal).toBe(0.5);
   });
 
-  it('Ігор: 90% сейвів у користувача, 45–50% у суперника', () => {
+  it('Ігор у клубі користувача майже непробивний для звичайних ударів, у суперника — ≈90% цього рівня', () => {
     const m = mk(true, { 0: 'ihor' });
     const shooter = m.players.find((p) => p.team === 1 && p.role === 'ST')!;
-    expect(m.goalProb(shooter, m.keeper(0), 15, 34, false, false).pGoal).toBeCloseTo(0.1, 5);
+    const user = m.goalProb(shooter, m.keeper(0), 15, 34, false, false).pGoal;
+    expect(user).toBeLessThanOrEqual(0.03);
     const m2 = new MatchEngine({ home: mkTeam('a', 75, false, { 0: 'ihor' }), away: mkTeam('b', 75, true), seed: 1 });
     const sh2 = m2.players.find((p) => p.team === 1 && p.role === 'ST')!;
-    const pg = m2.goalProb(sh2, m2.keeper(0), 15, 34, false, false).pGoal;
-    expect(pg).toBeGreaterThanOrEqual(0.5); expect(pg).toBeLessThanOrEqual(0.55);
+    const opp = m2.goalProb(sh2, m2.keeper(0), 15, 34, false, false).pGoal;
+    expect(1 - opp).toBeGreaterThanOrEqual(0.975 * 0.88); // ≈90% від рівня користувача, а не половина
+    expect(opp).toBeLessThan(0.15);
+  });
+
+  it('Ганна пробиває Ігоря рідше за Оксану; Оксана користувача — завжди', () => {
+    const vsOpp = new MatchEngine({ home: mkTeam('a', 75, true, { 9: 'hanna', 10: 'oksana' }), away: mkTeam('b', 75, false, { 0: 'ihor' }), seed: 1 });
+    const h = vsOpp.players.find((p) => p.sp?.id === 'hanna')!;
+    const o = vsOpp.players.find((p) => p.sp?.id === 'oksana')!;
+    const k = vsOpp.keeper(1)!;
+    expect(vsOpp.goalProb(o, k, 15, 34, false, false).pGoal).toBe(1);
+    const ph = vsOpp.goalProb(h, k, 15, 34, false, false).pGoal;
+    expect(ph).toBeGreaterThan(0.2); expect(ph).toBeLessThan(1);
+    const vsUser = new MatchEngine({ home: mkTeam('a', 75, true, { 0: 'ihor' }), away: mkTeam('b', 75, false, { 9: 'hanna' }), seed: 1 });
+    const h2 = vsUser.players.find((p) => p.sp?.id === 'hanna')!;
+    const p2 = vsUser.goalProb(h2, vsUser.keeper(0), 15, 34, false, false).pGoal;
+    expect(p2).toBeGreaterThan(0.1); expect(p2).toBeLessThan(ph);
   });
 
   it('здібність не спрацьовує без умов: без удару у площину Оксана не забиває', () => {

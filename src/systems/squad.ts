@@ -4,6 +4,7 @@ import { CLUB_BY_ID, CLUBS, type ClubDef } from '../data/clubs';
 import { FORMATIONS, FORMATION_IDS, SQUAD_ROLES, roleFit, type FormationId, type Role } from '../data/formations';
 import { SPECIAL_BY_ID } from '../data/specials';
 import { hashSeed, makeRng } from '../simulation/rng';
+import { restoreCost } from '../simulation/fatigue';
 import type { PlayerInit, TeamSetup } from '../simulation/types';
 import type { ClubState, PlayerState, SaveState } from './types';
 
@@ -29,18 +30,34 @@ export function genericPlayer(def: ClubDef, idx: number, seed: number): PlayerSt
 export function createClub(def: ClubDef, seed: number): ClubState {
   const players = SQUAD_ROLES.map((_, i) => genericPlayer(def, i, seed));
   const formation: FormationId = FORMATION_IDS[hashSeed(def.id) % FORMATION_IDS.length];
-  const club: ClubState = { id: def.id, boost: 0, formation, players, lineup: [], megaTransfers: [] };
+  const club: ClubState = { id: def.id, boost: 0, formation, players, lineup: [], megaTransfers: [], coins: clubStartCoins(def), finance: { season: 1, income: 0, spend: 0, log: [] } };
   club.lineup = autoLineup(club, false);
   return club;
+}
+
+/** Стартовий бюджет клубу-суперника: сильніші клуби мають більше, але слабші теж можуть розвиватися. */
+export function clubStartCoins(def: ClubDef): number {
+  const E = B.economy;
+  return Math.round((E.clubStartTop - ((def.seed - 1) / 17) * (E.clubStartTop - E.clubStartBottom)) / 100) * 100;
 }
 
 export const isAvailable = (p: PlayerState) => p.injured <= 0 && p.suspended <= 0;
 
 /** Рейтинг гравця з урахуванням здібностей (для вибору складу та відображення). */
 export function playerQ(p: PlayerState, isUser: boolean): number {
+  const gain = p.dev?.gained ?? 0;
+  if (p.special) { const sp = SPECIAL_BY_ID[p.special]; if (sp) return Math.min(B.development.cap, (isUser ? sp.user.q : sp.opp.q) + gain); }
+  return Math.min(B.development.cap, p.q + gain);
+}
+
+/** Рейтинг без розвитку — «стартовий». */
+export function baseQ(p: PlayerState, isUser: boolean): number {
   if (p.special) { const sp = SPECIAL_BY_ID[p.special]; if (sp) return isUser ? sp.user.q : sp.opp.q; }
   return p.q;
 }
+
+/** Множник для вибору складу: втомлених ставимо неохоче, критично виснажених — лише якщо немає заміни. */
+const fitnessFactor = (st: number) => (0.75 + 0.25 * Math.min(1, st / 80)) * (st < B.fatigue.aiBenchBelow ? 0.62 : 1);
 
 /** Найкращі 11 для схеми клубу з доступних гравців. */
 export function autoLineup(club: ClubState, isUser: boolean, formation: FormationId = club.formation): string[] {
@@ -54,7 +71,7 @@ export function autoLineup(club: ClubState, isUser: boolean, formation: Formatio
     for (const p of club.players) {
       if (used.has(p.id) || !isAvailable(p)) continue;
       const fit = roleFit(p.role, slots[si].role);
-      const s = playerQ(p, isUser) * fit * (0.75 + 0.25 * Math.min(1, p.stamina / 80)) + (fit === 1 ? 4 : 0);
+      const s = playerQ(p, isUser) * fit * fitnessFactor(p.stamina) + (fit === 1 ? 4 : 0);
       if (s > bs) { bs = s; best = p; }
     }
     if (best) { res[si] = best.id; used.add(best.id); }
@@ -75,7 +92,7 @@ export function resolveLineup(club: ClubState, isUser: boolean): string[] {
     let best: PlayerState | null = null, bs = -1;
     for (const p of club.players) {
       if (res.includes(p.id) || !isAvailable(p)) continue;
-      const s = playerQ(p, true) * roleFit(p.role, slots[i].role) * (0.75 + 0.25 * Math.min(1, p.stamina / 80));
+      const s = playerQ(p, true) * roleFit(p.role, slots[i].role) * fitnessFactor(p.stamina);
       if (s > bs) { bs = s; best = p; }
     }
     if (best) res[i] = best.id;
@@ -105,7 +122,7 @@ export function buildTeamSetup(state: SaveState, clubId: string, isHome: boolean
   const isUser = clubId === state.userClub;
   const ids = resolveLineup(club, isUser).filter(Boolean);
   const byId = new Map(club.players.map((p) => [p.id, p]));
-  const toInit = (p: PlayerState): PlayerInit => ({ pid: p.id, num: p.num, role: p.role, q: p.q + (isUser ? 0 : club.boost), stamina: p.stamina, special: p.special });
+  const toInit = (p: PlayerState): PlayerInit => ({ pid: p.id, num: p.num, role: p.role, q: p.q + (isUser ? 0 : club.boost), stamina: p.stamina, special: p.special, qBonus: p.dev?.gained ?? 0, boost: p.dev?.focus });
   const starters = ids.map((id) => toInit(byId.get(id)!));
   const bench = club.players.filter((p) => !ids.includes(p.id) && isAvailable(p)).map(toInit);
   const ihorInGoal = starters[0]?.special === 'ihor';
@@ -118,5 +135,21 @@ export function buildTeamSetup(state: SaveState, clubId: string, isHome: boolean
 
 export const ALL_CLUB_IDS = CLUBS.map((c) => c.id);
 export { emptyStats };
-export const staminaCost = (p: PlayerState) => Math.ceil((100 - p.stamina) * B.fatigue.restoreCostPerPoint);
+export const staminaCost = (p: PlayerState) => restoreCost(p.stamina);
 export const treatCost = (p: PlayerState) => p.injured * B.injuries.treatCostPerMatch;
+
+/** Попередження про втому основного складу користувача перед матчем. */
+export function fatigueWarning(state: SaveState): { level: 'tired' | 'critical'; players: { id: string; name: string; stamina: number }[] } | null {
+  const club = state.clubs[state.userClub];
+  const byId = new Map(club.players.map((p) => [p.id, p]));
+  const xi = resolveLineup(club, true).map((id) => byId.get(id)).filter((p): p is PlayerState => !!p);
+  const low = xi.filter((p) => p.stamina < B.fatigue.lowThreshold).sort((a, b) => a.stamina - b.stamina);
+  if (!low.length) return null;
+  return {
+    level: low.some((p) => p.stamina < B.fatigue.criticalThreshold) ? 'critical' : 'tired',
+    players: low.map((p) => ({ id: p.id, name: p.special ? SPECIAL_BY_ID[p.special].name : `Гравець №${p.num}`, stamina: Math.round(p.stamina) })),
+  };
+}
+
+/** Загальна вартість відновлення всіх утомлених гравців користувача. */
+export const restoreAllCost = (club: ClubState) => club.players.filter((p) => p.stamina < 100).reduce((a, p) => a + staminaCost(p), 0);

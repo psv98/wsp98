@@ -5,7 +5,8 @@ import { SPECIAL_BY_ID } from '../data/specials';
 import { simulateMatch } from '../simulation/engine';
 import { hashSeed, makeRng, rndInt } from '../simulation/rng';
 import type { MatchResult, MatchSetup } from '../simulation/types';
-import { addCoins, matchRewards } from './economy';
+import { closeOffseason } from './market';
+import { addCoins, aiMatchIncome, aiPrepareClubs, aiSeasonPrize, aiSponsor, clubCoins, matchRewards } from './economy';
 import { generateSchedule } from './schedule';
 import { ALL_CLUB_IDS, buildTeamSetup, clubStrength, createClub, emptyStats } from './squad';
 import { computeTable, positionOf } from './table';
@@ -25,7 +26,7 @@ export function newGame(userClub: string, seed: number, now = Date.now()): SaveS
     schedule: generateSchedule(ALL_CLUB_IDS, hashSeed(seed, 'schedule', 1)), results: [], clubs,
     coins: B.economy.startCoins, coinLog: [{ season: 1, round: 0, amount: B.economy.startCoins, reason: 'Стартовий бюджет' }],
     transfers: { pity: 0, owners: {}, legendaryLock: null, aiCount: 0, marketOpenUntil: -1, log: [], ihor: { count: 0, target: rndInt(rng, B.transfers.ihorStormMin, B.transfers.ihorStormMax) }, drops: 0 },
-    pending: null, userMatches: [], history: [], events: [],
+    pending: null, userMatches: [], history: [], events: [], offseason: null,
   };
 }
 
@@ -59,17 +60,17 @@ function applyMatch(state: SaveState, fx: Fixture, res: MatchResult, post?: Post
     }
     if (pr.yellow > 0 && pr.red !== 1) {
       p.s.yc += pr.yellow; p.yellows += pr.yellow;
-      if (p.yellows >= B.discipline.yellowsForBan) { p.yellows -= B.discipline.yellowsForBan; p.suspended += 1; if (post && ids[pr.team] === state.userClub) post.newBans.push({ name: pr.name, matches: 1, reason: 'перебір жовтих карток' }); }
+      if (p.yellows >= B.discipline.yellowsForBan) { p.yellows -= B.discipline.yellowsForBan; p.suspended += 1; if (post && ids[pr.team] === state.userClub) post.newBans.push({ name: pr.name, matches: 1, reason: 'перебір жовтих карток', special: pr.special }); }
     }
     if (pr.red) {
       p.s.rc++;
       const n = pr.red === 2 ? B.discipline.directRedBan : B.discipline.redBan;
       p.suspended += n;
-      if (post && ids[pr.team] === state.userClub) post.newBans.push({ name: pr.name, matches: n, reason: 'червона картка' });
+      if (post && ids[pr.team] === state.userClub) post.newBans.push({ name: pr.name, matches: n, reason: 'червона картка', special: pr.special });
     }
     if (pr.injury > 0) {
       p.injured = pr.injury;
-      if (post && ids[pr.team] === state.userClub) post.newInjuries.push({ pid: p.id, name: pr.name, matches: pr.injury });
+      if (post && ids[pr.team] === state.userClub) post.newInjuries.push({ pid: p.id, name: pr.name, matches: pr.injury, special: pr.special });
     }
   }
   if (res.motm) {
@@ -160,6 +161,12 @@ export function applyRound(prev: SaveState, userResult: MatchResult, others: Map
   for (const g of userResult.goals) { if (g.team === side) us++; else them++; if (them > us) wasBehind = true; }
   post.rewards = matchRewards(state, post.user, strengths[state.userClub] - strengths[opp], wasBehind);
   addCoins(state, post.rewards);
+  // доходи клубів-суперників за матчі туру
+  for (const sum of summaries) {
+    for (const [cid, us, them] of [[sum.home, sum.score[0], sum.score[1]], [sum.away, sum.score[1], sum.score[0]]] as [string, number, number][]) {
+      if (cid !== state.userClub) clubCoins(state, cid, aiMatchIncome(us, them), us > them ? 'Перемога' : us === them ? 'Нічия' : 'Участь у матчі');
+    }
+  }
   state.userMatches.push(post.user);
   state.results.push(summaries);
 
@@ -175,6 +182,7 @@ export function applyRound(prev: SaveState, userResult: MatchResult, others: Map
   for (const s of post.sensation) state.events.push({ season: state.season, round: round + 1, text: `Сенсація туру: ${CLUB_BY_ID[s.home].name} ${s.score[0]}:${s.score[1]} ${CLUB_BY_ID[s.away].name}` });
   if (state.events.length > 200) state.events = state.events.slice(-200);
 
+  aiPrepareClubs(state); // суперники готуються до наступного туру: ротація, відновлення, лікування
   state.round = round + 1;
   if (state.round >= ROUNDS) { post.seasonFinished = true; finishSeason(state); }
   state.pending = post;
@@ -188,6 +196,7 @@ function finishSeason(state: SaveState) {
   const earnedBefore = state.coinLog.filter((c) => c.season === state.season && c.amount > 0).reduce((a, c) => a + c.amount, 0);
   if (pos === 1) addCoins(state, [{ season: state.season, round: ROUNDS, amount: E.champion, reason: 'Чемпіон Білого суперкубка' }]);
   else if (pos <= 3) addCoins(state, [{ season: state.season, round: ROUNDS, amount: E.top3, reason: `Призове місце (${pos})` }]);
+  table.forEach((r, i) => { if (r.id !== state.userClub) clubCoins(state, r.id, aiSeasonPrize(i + 1), `Призові за ${i + 1} місце`); });
   const scorers: SeasonRecord['topScorers'] = [];
   for (const club of Object.values(state.clubs)) for (const p of club.players) if (p.s.goals > 0) scorers.push({ name: p.special ? SPECIAL_BY_ID[p.special].name : `Гравець №${p.num}`, club: club.id, goals: p.s.goals, special: p.special });
   scorers.sort((a, b) => b.goals - a.goals);
@@ -216,6 +225,14 @@ function finishSeason(state: SaveState) {
 export function nextSeason(prev: SaveState): SaveState {
   if (prev.round < ROUNDS) throw new Error('Сезон ще не завершено');
   const state = clone(prev);
+  // міжсезоння: угоди й розвиток суперників, підсумок зберігається в історії сезону
+  if (state.offseason) {
+    closeOffseason(state);
+    const rec = state.history[state.history.length - 1];
+    const o = state.offseason;
+    if (rec) rec.offseason = { bought: o.bought, sold: o.sold, news: o.news.slice(-30), ratingChanges: o.ratingChanges, spent: o.devSpent + o.transferSpent, income: o.transferIncome };
+    state.offseason = null;
+  }
   state.season++;
   state.round = 0;
   state.results = [];
@@ -227,7 +244,10 @@ export function nextSeason(prev: SaveState): SaveState {
   state.transfers.marketOpenUntil = -1;
   const S = B.seasons;
   for (const club of Object.values(state.clubs)) {
-    if (club.id !== state.userClub) club.boost = Math.min(S.aiGrowthCap, Math.round((club.boost + S.aiGrowthPerSeason) * 10) / 10);
+    if (club.id !== state.userClub) {
+      club.boost = Math.min(S.aiGrowthCap, Math.round((club.boost + S.aiGrowthPerSeason) * 10) / 10);
+      clubCoins(state, club.id, aiSponsor(club.id), 'Спонсорський контракт');
+    }
     for (const p of club.players) { p.stamina = 100; p.injured = 0; p.suspended = 0; p.yellows = 0; p.s = emptyStats(); }
   }
   return state;

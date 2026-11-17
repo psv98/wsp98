@@ -3,6 +3,7 @@ import { BALANCE as B } from '../src/data/balance';
 import { CLUBS } from '../src/data/clubs';
 import { IMI_SPECIALS, TRANSFER_UNITS } from '../src/data/specials';
 import { makeRng } from '../src/simulation/rng';
+import { restoreCost } from '../src/simulation/fatigue';
 import { GameError, ackPostMatch, buyStar, claimCard, restoreStamina, setFormation, setLineupSlot, treatPlayer } from '../src/systems/actions';
 import { addCoins, matchRewards, spend } from '../src/systems/economy';
 import { ROUNDS, applyRound, clone, newGame, nextSeason, playRoundAuto } from '../src/systems/season';
@@ -78,7 +79,7 @@ describe('економіка', () => {
     expect(s2.coins).toBe(5000 - 2 * B.injuries.treatCostPerMatch);
     const s3 = restoreStamina(s2, p.id);
     expect(s3.clubs.texty.players[5].stamina).toBe(100);
-    expect(s3.coins).toBe(s2.coins - 60 * B.fatigue.restoreCostPerPoint);
+    expect(s3.coins).toBe(s2.coins - restoreCost(40));
     s = clone(s); s.coins = 10;
     expect(() => treatPlayer(s, p.id)).toThrow(GameError);
     expect(s.clubs.texty.players[5].injured).toBe(2);
