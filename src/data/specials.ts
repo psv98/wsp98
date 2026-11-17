@@ -142,8 +142,8 @@ export const SPECIALS: SpecialDef[] = [
     role: 'ST', side: 'R', roleName: 'Нападниця / права вінгерка', ability: 'Європейські ножиці', fatigue: 1, img: 'assets/specials/eu.png',
     perks: ['Майстриня акробатичних ударів', '«Європейські ножиці»: удар через себе після навісу', 'Висока швидкість і дриблінг', 'Посилює флангові навіси команди'],
     // швидкість 94, дриблінг 90, удари 88, гра головою 80, передачі 84, захист 48 — через модифікатори наявної системи рейтингів
-    user: { q: 89, speed: 1.14, evade: 0.72, header: -9, pass: 0.9, teamCross: 0.85, scissors: { attempt: 0.2, onTarget: 0.65, goal: 0.6 } },
-    opp: { q: 85, speed: 1.08, evade: 0.82, header: -9, pass: 0.95, teamCross: 0.9, scissors: { attempt: 0.16, onTarget: 0.55, goal: 0.5 } },
+    user: { q: 87, speed: 1.14, evade: 0.72, header: -9, pass: 0.9, teamCross: 0.85, scissors: { attempt: 0.2, onTarget: 0.65, goal: 0.6 } },
+    opp: { q: 83, speed: 1.08, evade: 0.82, header: -9, pass: 0.95, teamCross: 0.9, scissors: { attempt: 0.16, onTarget: 0.55, goal: 0.5 } },
   },
   {
     id: 'troian', gender: 'female', nameAcc: 'Валентину Троян', name: 'Валентина Троян', short: 'Валентина Т.', title: 'Фортеця центру', rarity: 'rare', kind: 'imi',
