@@ -41,7 +41,8 @@ export interface SpecialDef {
   opp: Fx;
 }
 
-const IMI = 'assets/imi/imi.png';
+// Оригінальний логотип ІМІ з UI kit (накладається на картку окремим елементом)
+const IMI = 'assets/ui/branding/imi-round-original.svg';
 
 export const SPECIALS: SpecialDef[] = [
   {

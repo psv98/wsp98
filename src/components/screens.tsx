@@ -36,20 +36,19 @@ export function Title() {
   const [reset, setReset] = useState(false);
   return (
     <div className="title" onPointerDown={() => { audio.unlock(); audio.music('menu'); }}>
-      <div className="beam b1" /><div className="beam b2" /><div className="beam b3" />
-      <div className="lamps l">{Array.from({ length: 12 }, (_, i) => <i key={i} />)}</div>
-      <div className="lamps r">{Array.from({ length: 12 }, (_, i) => <i key={i} />)}</div>
+      <div className="beam b1" /><div className="beam b2" />
       <div className="title-inner">
+        <SupercupIcon size={170} className="title-cup" />
         <h1 style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)' }}>БІЛИЙ СУПЕРКУБОК</h1>
         <SupercupLogo />
         <div className="scoreboard">18 медіаклубів. 34 тури. Один чемпіон.</div>
         <div className="title-menu">
           {save && <Btn kind="primary big" onClick={() => go(resumeScreen(save))}>Продовжити сезон</Btn>}
-          <Btn kind={save ? '' : 'primary big'} disabled={!loaded} onClick={() => (save ? setReset(true) : go('select'))}>Почати гру</Btn>
-          <Btn onClick={() => go('settings')}>Налаштування</Btn>
-          <Btn onClick={() => go('about')}>Про гру</Btn>
+          <Btn kind={save ? 'green' : 'primary big'} disabled={!loaded} onClick={() => (save ? setReset(true) : go('select'))}>Почати гру</Btn>
+          <Btn kind="blue" onClick={() => go('settings')}>Налаштування</Btn>
+          <Btn kind="blue" onClick={() => go('about')}>Про гру</Btn>
         </div>
-        {save && <p className="muted" style={{ fontSize: 12 }}>{clubName(save.userClub)} · сезон {save.season}, тур {Math.min(save.round + 1, ROUNDS)} · збережено {fmtTime(save.savedAt)}</p>}
+        {save && <p className="title-save">Збереження: {clubName(save.userClub)} · сезон {save.season}, тур {Math.min(save.round + 1, ROUNDS)} · збережено {fmtTime(save.savedAt)}</p>}
       </div>
       {reset && <ResetFlow onClose={() => setReset(false)} />}
     </div>
@@ -137,10 +136,10 @@ export function Hub() {
         <div className="stat"><span>Стан команди</span><b className={teamCondition(club) < 60 ? 'bad' : ''}>{teamCondition(club)}%</b></div>
         <div className="stat"><span>Травми / дискв.</span><b className={inj + ban ? 'bad' : ''}>{inj} / {ban}</b></div>
         <div className="stat"><span>Останній матч</span><b className={last ? (last.res === 'W' ? 'good' : last.res === 'L' ? 'bad' : '') : ''}>{last ? `${last.us}:${last.them}` : '—'}</b></div>
-        <div className="stat"><span>Мегатрансфер</span><b style={{ fontSize: 13 }} className={pityLeft <= 1 ? 'gold' : ''}>{pityLeft <= 1 ? 'Гарантовано після матчу!' : `Можливий; гарантія за ${matchesWord(pityLeft)}`}</b></div>
+        <div className="stat wide"><span>Мегатрансфер</span><b style={{ fontSize: 13 }} className={pityLeft <= 1 ? 'gold' : ''}>{pityLeft <= 1 ? 'Гарантовано після матчу!' : `Можливий; гарантія за ${matchesWord(pityLeft)}`}</b></div>
       </div>
       {nm && (
-        <div className="panel">
+        <div className="panel hero">
           <h3>Найближчий матч · тур {s.round + 1} · {nm.home ? 'вдома' : 'на виїзді'}</h3>
           <div className="next">
             <div className="side"><Logo club={nm.fx.home} size={58} /><b>{clubName(nm.fx.home)}</b><small className="muted">господарі</small></div>
@@ -168,13 +167,13 @@ export function TableView({ table, me, champion }: { table: TableRow[]; me: stri
   return (
     <div className="tblwrap">
       <table className="tbl">
-        <thead><tr><th>#</th><th className="name">Клуб</th><th title="Зіграно матчів">І</th><th title="Перемоги">В</th><th title="Нічиї">Н</th><th title="Поразки">П</th><th className="hide-sm" title="Забиті голи">ЗГ</th><th className="hide-sm" title="Пропущені голи">ПГ</th><th title="Різниця мʼячів">РМ</th><th title="Очки">О</th><th className="hide-sm">Форма</th></tr></thead>
+        <thead><tr><th>#</th><th className="name">Клуб</th><th title="Зіграно матчів">І</th><th className="hide-sm" title="Перемоги">В</th><th className="hide-sm" title="Нічиї">Н</th><th className="hide-sm" title="Поразки">П</th><th className="hide-sm" title="Забиті голи">ЗГ</th><th className="hide-sm" title="Пропущені голи">ПГ</th><th title="Різниця мʼячів">РМ</th><th title="Очки">О</th><th className="hide-sm">Форма</th></tr></thead>
         <tbody>
           {table.map((r, i) => (
             <tr key={r.id} className={r.id === me ? 'me' : ''}>
               <td>{i + 1}</td>
               <td className="name"><span className="row" style={{ gap: 8 }}><Logo club={r.id} size={24} /><span className="ell">{clubName(r.id)}</span>{r.id === champion && <SupercupIcon size={18} title="Чинний чемпіон" />}</span></td>
-              <td>{r.p}</td><td>{r.w}</td><td>{r.d}</td><td>{r.l}</td><td className="hide-sm">{r.gf}</td><td className="hide-sm">{r.ga}</td><td>{r.gd > 0 ? `+${r.gd}` : r.gd}</td><td className="pts">{r.pts}</td>
+              <td>{r.p}</td><td className="hide-sm">{r.w}</td><td className="hide-sm">{r.d}</td><td className="hide-sm">{r.l}</td><td className="hide-sm">{r.gf}</td><td className="hide-sm">{r.ga}</td><td>{r.gd > 0 ? `+${r.gd}` : r.gd}</td><td className="pts">{r.pts}</td>
               <td className="hide-sm"><span className="form">{r.form.map((f, k) => <i key={k} className={f} />)}</span></td>
             </tr>
           ))}
@@ -204,7 +203,7 @@ export function FixtureRow({ home, away, score, me }: { home: string; away: stri
 
 function RoundTabs({ n, cur, set, max }: { n: number; cur: number; set: (r: number) => void; max?: number }) {
   const ref = useRef<HTMLDivElement>(null);
-  return <div className="tabs" ref={ref}>{Array.from({ length: n }, (_, i) => <button type="button" key={i} disabled={max != null && i >= max} className={i === cur ? 'on' : ''} onClick={() => set(i)}>Тур {i + 1}</button>)}</div>;
+  return <div className="rounds" ref={ref} role="tablist" aria-label="Тури">{Array.from({ length: n }, (_, i) => <button type="button" key={i} disabled={max != null && i >= max} className={i === cur ? 'on' : ''} aria-label={`Тур ${i + 1}`} onClick={() => set(i)}>{i + 1}</button>)}</div>;
 }
 
 export function Calendar() {
@@ -257,7 +256,7 @@ export function CoinsScreen() {
     <>
       <TopBar title="Медіакоїни" />
       <div className="page grid">
-        <div className="panel center"><h3>Баланс</h3><div style={{ fontFamily: 'var(--font-head)', fontSize: 34 }} className="gold">{s.coins.toLocaleString('uk-UA')} MC</div></div>
+        <div className="panel hero center"><h3>Баланс</h3><div className="bignum gold">{s.coins.toLocaleString('uk-UA')} <small>MC</small></div></div>
         <div className="panel"><h3>Як заробити</h3>
           <div className="row wrap">{[['Перемога', E.win], ['Нічия', E.draw], ['Участь', E.loss], ['Кожен гол', E.perGoal], ['Сухий матч', E.cleanSheet], ['Перемога над фаворитом', E.upsetWin], ['Розгром (+3)', E.bigWin], ['Вольова перемога', E.comebackWin], ['Хет-трик', E.hatTrick], ['Чемпіонство', E.champion]].map(([k, v]) => <span className="chip" key={k as string}>{k}: <b className="gold">+{v}</b></span>)}</div>
           <p className="muted" style={{ marginTop: 10, fontSize: 13 }}>Витрачайте MC на лікування травм, відновлення витривалості та світових зірок, коли «Фінансовий джекпот ІМІ» відкриє трансферний ринок.</p>
@@ -281,7 +280,7 @@ export function MatchDetails({ m, me }: { m: UserMatchRecord; me: string }) {
       <FixtureRow home={m.home} away={m.away} score={m.score} me={me} />
       {m.goals.length > 0 && <div className="evlist">{m.goals.map((g, i) => <div key={i}><span className="m">{g.minLabel}'</span><span>⚽ {g.name}{g.pen ? ' (пен.)' : ''}{g.header ? ' (головою)' : ''} — {clubName(g.team === 0 ? m.home : m.away)}{g.assist ? ` · асист: ${g.assist}` : ''}</span></div>)}</div>}
       <div style={{ '--c1': c1, '--c2': c2 } as CSSProperties}>
-        {L.map(([label, k]) => { const a = m.stats[0][k] as number, b = m.stats[1][k] as number; const t = a + b || 1; return (<div className="statline" key={k}><b>{a}</b><div><div className="muted" style={{ fontSize: 12 }}>{label}</div><div className="bar"><i style={{ width: `${(a / t) * 100}%` }} /><u /></div></div><b>{b}</b></div>); })}
+        {L.map(([label, k]) => { const a = m.stats[0][k] as number, b = m.stats[1][k] as number; const t = a + b || 1; return (<div className="statline" key={k}><b>{a}</b><div><div className="lbl">{label}</div><div className="bar"><i style={{ width: `${a + b === 0 ? 50 : (a / t) * 100}%` }} /><u /></div></div><b>{b}</b></div>); })}
       </div>
       {m.motm && <p>⭐ <b>{m.motm.name}</b> — {/(а|я)$/.test(m.motm.name.split(' ')[0]) && m.motm.special ? 'найкраща гравчиня матчу' : 'найкращий гравець матчу'} ({clubName(m.motm.team === 0 ? m.home : m.away)})</p>}
       {m.topSaves && m.topSaves.saves > 0 && <p className="muted">🧤 {m.topSaves.name} — сейвів: {m.topSaves.saves}</p>}

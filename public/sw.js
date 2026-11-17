@@ -1,6 +1,6 @@
 // Service Worker «Білого суперкубка»: кешує ресурси для швидкого запуску та гри без інтернету.
-const CACHE = 'bsk-v2';
-const CORE = ['./', './index.html', './manifest.webmanifest', './assets/imi/imi.png', './assets/icons/supercup.svg'];
+const CACHE = 'bsk-v3';
+const CORE = ['./', './index.html', './manifest.webmanifest', './assets/ui/branding/imi-round-original.svg', './assets/icons/supercup.svg'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(CORE)).then(() => self.skipWaiting()));

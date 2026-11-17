@@ -35,16 +35,16 @@ export function Transfers() {
             {sorted.map((sp) => {
               const o = owners[sp.id];
               const mine = o === s.userClub;
-              return <PlayerCard key={sp.id} sp={sp} isUser className={mine ? '' : o ? 'elsewhere' : 'locked'} note={o && !mine ? `Грає за: ${clubName(o)}` : undefined} compact={!mine} showQ={mine} />;
+              return <PlayerCard key={sp.id} sp={sp} isUser compact dim={mine ? undefined : o ? 'elsewhere' : 'locked'} note={mine ? 'У вашому клубі' : o ? `Грає за: ${clubName(o)}` : 'Ще не отримано'} />;
             })}
           </div>
         </>)}
         {tab === 1 && (<>
-          <div className="panel center">
+          <div className="panel hero center">
             {open ? (<><h2 className="gold">Трансферне вікно відкрито!</h2><p>«Трансферний бюджет погоджено!» Вікно зачиниться після туру {s.transfers.marketOpenUntil + 1}. Ваш бюджет: <Coins n={s.coins} /></p></>)
               : (<><h2>Ринок закрито 🔒</h2><p className="muted">Трансферний ринок світових зірок відкриває лише секретна подія «Фінансовий джекпот ІМІ», яка може випасти після матчу.</p></>)}
           </div>
-          <div className="cardgrid">
+          <div className="cardgrid market">
             {STARS.map((sp) => { const o = owners[sp.id]; return <div key={sp.id} style={open ? undefined : { filter: 'grayscale(.7) brightness(.7)' }}><MarketCard sp={sp} owned={o === s.userClub} soldTo={o && o !== s.userClub ? clubName(o) : undefined} canBuy={open && s.coins >= (sp.price ?? 0)} onBuy={() => act((st) => buyStar(st, sp.id), `${sp.name} приєднався до вашого клубу!`)} /></div>; })}
           </div>
         </>)}

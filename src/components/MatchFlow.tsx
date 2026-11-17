@@ -58,7 +58,7 @@ export function PreMatch() {
   );
   return (
     <div className="page grid">
-      <div className="panel">
+      <div className="panel hero">
         <h3>Тур {s.round + 1} · сезон {s.season}</h3>
         <div className="next">
           <div className="side"><Logo club={fx.home} size={64} /><b>{home.name}</b><small className="muted">{home.formation} · господарі</small></div><div className="vs">VS</div>
@@ -84,7 +84,7 @@ function liveStats(m: MatchEngine): [TeamStats, TeamStats] {
 }
 const STAT_ROWS: [string, keyof TeamStats][] = [['Удари', 'shots'], ['У площину', 'onTarget'], ['Володіння, %', 'possession'], ['Кутові', 'corners'], ['Фоли', 'fouls'], ['Жовті', 'yellows'], ['Червоні', 'reds'], ['Сейви', 'saves']];
 function StatBlock({ st, c1, c2 }: { st: [TeamStats, TeamStats]; c1: string; c2: string }) {
-  return <div style={{ '--c1': c1, '--c2': c2 } as CSSProperties}>{STAT_ROWS.map(([l, k]) => { const a = st[0][k], b = st[1][k], t = a + b || 1; return <div className="statline" key={k}><b>{a}</b><div><div className="muted" style={{ fontSize: 12 }}>{l}</div><div className="bar"><i style={{ width: `${(a / t) * 100}%` }} /><u /></div></div><b>{b}</b></div>; })}</div>;
+  return <div style={{ '--c1': c1, '--c2': c2 } as CSSProperties}>{STAT_ROWS.map(([l, k]) => { const a = st[0][k], b = st[1][k], t = a + b || 1; return <div className="statline" key={k}><b>{a}</b><div><div className="lbl">{l}</div><div className="bar"><i style={{ width: `${a + b === 0 ? 50 : (a / t) * 100}%` }} /><u /></div></div><b>{b}</b></div>; })}</div>;
 }
 
 export function MatchScreen() {
@@ -104,10 +104,11 @@ export function MatchScreen() {
   const [panel, setPanel] = useState<null | 'subs' | 'tactics' | 'exit' | 'instant' | 'log'>(null);
   const [subOut, setSubOut] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [userPaused, setUserPaused] = useState(false);
   const names: [string, string] = [clubName(fx.home), clubName(fx.away)];
   const colors: [string, string] = [CLUB_BY_ID[fx.home].color, CLUB_BY_ID[fx.away].color];
 
-  useEffect(() => { paused.current = panel != null; }, [panel]);
+  useEffect(() => { paused.current = panel != null || userPaused; }, [panel, userPaused]);
   useEffect(() => { rendRef.current?.setLow(settings.lowGfx); }, [settings.lowGfx]);
 
   useEffect(() => {
@@ -226,6 +227,7 @@ export function MatchScreen() {
       </div>
       <div className="mcanvas" ref={boxRef}>
         <canvas ref={canvasRef} />
+        {userPaused && !panel && !engine.finished && engine.phase !== 'half' && <div className="banner info">Пауза</div>}
         {banner && <div key={banner.key} className={`banner ${tone}`}>{banner.line.text.split('. ')[0]}{banner.line.text.includes('. ') && <small>{banner.line.text.split('. ').slice(1).join('. ')}</small>}</div>}
         {engine.phase === 'var' && engine.pendingVar && (
           <div className="mpanel"><div className="box center">
@@ -236,7 +238,8 @@ export function MatchScreen() {
         )}
         {engine.phase === 'half' && !panel && (
           <div className="mpanel"><div className="box">
-            <h2 className="center">Перерва · {engine.score[0]} : {engine.score[1]}</h2>
+            <h2 className="center">Перерва</h2>
+            <div className="plates" style={{ margin: '8px auto 10px' }}><b>{engine.score[0]}</b><i>:</i><b>{engine.score[1]}</b></div>
             <StatBlock st={liveStats(engine)} c1={colors[0]} c2={colors[1]} />
             <div className="row wrap" style={{ justifyContent: 'center', marginTop: 12 }}><Btn onClick={() => setPanel('subs')}>Заміни ({subsLeft})</Btn><Btn onClick={() => setPanel('tactics')}>Тактика</Btn><Btn kind="primary" onClick={() => { engine.startSecondHalf(); force((x) => x + 1); }}>Другий тайм</Btn></div>
           </div></div>
@@ -244,7 +247,7 @@ export function MatchScreen() {
         {engine.finished && (
           <div className="mpanel"><div className="box">
             <h2 className="center">Фінальний свисток</h2>
-            <div className="next" style={{ margin: '10px 0' }}><div className="side"><Logo club={fx.home} size={48} /><b>{names[0]}</b></div><div className="score num" style={{ fontFamily: 'var(--font-num)', fontSize: 34 }}>{engine.score[0]} : {engine.score[1]}</div><div className="side"><Logo club={fx.away} size={48} /><b>{names[1]}</b></div></div>
+            <div className="next" style={{ margin: '10px 0' }}><div className="side"><Logo club={fx.home} size={48} /><b>{names[0]}</b></div><div className="plates"><b>{engine.score[0]}</b><i>:</i><b>{engine.score[1]}</b></div><div className="side"><Logo club={fx.away} size={48} /><b>{names[1]}</b></div></div>
             <StatBlock st={liveStats(engine)} c1={colors[0]} c2={colors[1]} />
             <div className="center" style={{ marginTop: 12 }}><Btn kind="primary big" disabled={!!busy} onClick={() => void finish()}>{busy ?? 'Підсумки туру'}</Btn></div>
           </div></div>
@@ -281,9 +284,11 @@ export function MatchScreen() {
       <div className="mbar">
         <button type="button" className="mbtn" aria-label="Вийти з матчу" onClick={() => setPanel('exit')}><Icon name="cross" size={18} /></button>
         <div className="ticker ell" onClick={() => setPanel('log')} role="button" tabIndex={0}>{last ? <><b className="gold">{last.min}'</b> <b>{last.line.text}</b></> : 'Матч починається…'}</div>
-        {[1, 2, 4].map((v) => <button type="button" key={v} className={`mbtn ${speed.current === v ? 'on' : ''}`} onClick={() => setSpeed(v)} title={`Швидкість ×${v}`}>×{v}</button>)}
-        <button type="button" className="mbtn" onClick={() => setPanel('subs')} disabled={engine.finished}>Заміни</button>
-        <button type="button" className="mbtn" onClick={() => setPanel('tactics')} disabled={engine.finished}>Тактика</button>
+        <button type="button" className={`mbtn ${userPaused ? 'on' : ''}`} aria-label={userPaused ? 'Продовжити' : 'Пауза'} title={userPaused ? 'Продовжити' : 'Пауза'} disabled={engine.finished} onClick={() => setUserPaused((v) => !v)}><Icon name={userPaused ? 'play' : 'pause'} size={18} /></button>
+        {[1, 2, 4].map((v) => <button type="button" key={v} className={`mbtn spd ${speed.current === v ? 'on' : ''}`} onClick={() => setSpeed(v)} title={`Швидкість ×${v}`}>×{v}</button>)}
+        <button type="button" className={`mbtn spd-cycle ${speed.current > 1 ? 'on' : ''}`} onClick={() => setSpeed(speed.current === 1 ? 2 : speed.current === 2 ? 4 : 1)} aria-label={`Швидкість ×${speed.current}, змінити`}>×{speed.current}</button>
+        <button type="button" className="mbtn txt" onClick={() => setPanel('subs')} disabled={engine.finished}>Заміни</button>
+        <button type="button" className="mbtn txt" onClick={() => setPanel('tactics')} disabled={engine.finished}>Тактика</button>
         <button type="button" className="mbtn" onClick={() => setPanel('instant')} disabled={engine.finished} title="Миттєвий результат">⏭</button>
         <button type="button" className="mbtn" aria-label="На весь екран" onClick={() => { const el = document.documentElement; if (document.fullscreenElement) void document.exitFullscreen(); else void el.requestFullscreen?.().then(() => (screen.orientation as unknown as { lock?: (o: string) => Promise<void> })?.lock?.('landscape').catch(() => undefined)).catch(() => undefined); }}><Icon name="full" size={18} /></button>
       </div>
@@ -325,17 +330,21 @@ export function PostMatch() {
   }
 
   return (
-    <div className="page grid">
-      <div className="panel center" style={{ background: `radial-gradient(circle at 50% 0, ${us > them ? 'rgba(47,191,113,.25)' : us < them ? 'rgba(239,75,90,.2)' : 'rgba(255,255,255,.1)'}, transparent 70%), var(--panel)` }}>
+    <div className="page grid narrow">
+      <div className={`panel hero center result ${us > them ? 'win' : us < them ? 'loss' : 'draw'}`}>
         <h3>Тур {post.round + 1} · підсумок матчу</h3>
-        <h2 className={us > them ? 'good' : us < them ? 'bad' : ''}>{us > them ? 'ПЕРЕМОГА!' : us < them ? 'Поразка' : 'Нічия'}</h2>
-        <div style={{ maxWidth: 520, margin: '8px auto 0' }}><FixtureRow home={m.home} away={m.away} score={m.score} me={s.userClub} /></div>
-        {m.motm && <p style={{ marginTop: 8 }}>⭐ Герой матчу: <b>{m.motm.name}</b> ({clubName(m.motm.team === 0 ? m.home : m.away)})</p>}
-        <div style={{ marginTop: 8 }}><Btn kind="small" onClick={() => setDetails(true)}>Статистика матчу</Btn></div>
+        <h2 className="verdict">{us > them ? 'Перемога!' : us < them ? 'Поразка' : 'Нічия'}</h2>
+        <div className="next" style={{ maxWidth: 640, margin: '10px auto 0' }}>
+          <div className="side"><Logo club={m.home} size={64} /><b>{clubName(m.home)}</b></div>
+          <div className="plates"><b>{m.score[0]}</b><i>:</i><b>{m.score[1]}</b></div>
+          <div className="side"><Logo club={m.away} size={64} /><b>{clubName(m.away)}</b></div>
+        </div>
+        {m.motm && <p style={{ marginTop: 12 }}>⭐ Герой матчу: <b>{m.motm.name}</b> <span className="muted">({clubName(m.motm.team === 0 ? m.home : m.away)})</span></p>}
+        <div style={{ marginTop: 6 }}><Btn kind="small blue" onClick={() => setDetails(true)}>Статистика матчу</Btn></div>
       </div>
       <div className="panel">
         <h3>Медіакоїни за матч</h3>
-        <div className="evlist">{post.rewards.map((r, i) => <div key={i}><span className="grow">{r.reason}</span><b className="good">+{r.amount}</b></div>)}<div style={{ borderTop: '1px solid var(--line)', paddingTop: 6 }}><b className="grow">Разом</b><Coins n={total} sign /></div></div>
+        <div className="evlist">{post.rewards.map((r, i) => <div key={i}><span className="grow">{r.reason}</span><b className="good num">+{r.amount}</b></div>)}<div className="total"><b className="grow">Разом</b><Coins n={total} sign /></div></div>
       </div>
       {(post.newInjuries.length > 0 || post.newBans.length > 0) && (
         <div className="panel"><h3>Лазарет і дискваліфікації</h3><div className="news">
@@ -345,7 +354,7 @@ export function PostMatch() {
           {post.newBans.map((b, i) => <div key={i} style={{ '--nc': '#ffd43b' } as CSSProperties}><b>{b.name}</b> дискваліфікований на {matchesWord(b.matches)} — {b.reason}.</div>)}
         </div></div>
       )}
-      <div className="panel"><h3>Інші матчі туру</h3>{post.others.map((o, i) => <FixtureRow key={i} home={o.home} away={o.away} score={o.score} me={s.userClub} />)}</div>
+      <div className="panel"><h3>Інші матчі туру</h3><div className="fx2">{post.others.map((o, i) => <FixtureRow key={i} home={o.home} away={o.away} score={o.score} me={s.userClub} />)}</div></div>
       {(post.aiTransfers.length > 0 || post.sensation.length > 0) && (
         <div className="panel"><h3>Новини ліги</h3><div className="news">
           {post.sensation.map((x, i) => <div key={`s${i}`} style={{ '--nc': 'var(--gold)' } as CSSProperties}>⚡ <b>Сенсація туру!</b> {clubName(x.home)} {x.score[0]}:{x.score[1]} {clubName(x.away)}</div>)}
@@ -353,7 +362,7 @@ export function PostMatch() {
         </div></div>
       )}
       <div className="center">
-        {post.card && !post.cardClaimed ? <Btn kind="primary big" onClick={() => setReveal(true)}>ВІДКРИТИ МЕГАТРАНСФЕР</Btn>
+        {post.card && !post.cardClaimed ? <Btn kind="purple big" onClick={() => setReveal(true)}>ВІДКРИТИ МЕГАТРАНСФЕР</Btn>
           : <Btn kind="primary big" onClick={() => { if (act(ackPostMatch)) go(post.seasonFinished ? 'ceremony' : 'hub'); }}>{post.seasonFinished ? 'До церемонії нагородження' : 'Далі'}</Btn>}
         {!post.card && <p className="muted" style={{ marginTop: 8, fontSize: 12.5 }}>Цього разу мегатрансфер не випав. {s.transfers.pity >= B.transfers.pityMatches - 1 ? 'Після наступного матчу він гарантований!' : ''}</p>}
       </div>

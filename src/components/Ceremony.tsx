@@ -5,7 +5,7 @@ import { clubName } from '../game/selectors';
 import { go, startNextSeason, useApp } from '../game/store';
 import { unitName } from '../systems/transfers';
 import { ResetFlow, TableView } from './screens';
-import { ChampionshipBadge, GoldConfetti, SupercupIcon, TrophyRevealAnimation, VictoryScreen } from './supercup';
+import { ChampionshipBadge, GoldConfetti, SupercupIcon, TrophyRevealAnimation, WinnerScreen } from './supercup';
 import { Btn, Coins, Logo } from './ui';
 
 export function Ceremony() {
@@ -13,7 +13,7 @@ export function Ceremony() {
   const s = save!;
   const rec = s.history.find((h) => h.season === s.season) ?? s.history[s.history.length - 1];
   const mine = !!rec && rec.champion === s.userClub;
-  const [stage, setStage] = useState<'anim' | 'victory' | 'summary'>(mine ? 'anim' : 'summary');
+  const [stage, setStage] = useState<'anim' | 'victory' | 'summary'>(mine ? 'anim' : 'victory');
   const [reset, setReset] = useState(false);
   useEffect(() => {
     if (stage !== 'summary') return;
@@ -23,8 +23,19 @@ export function Ceremony() {
   if (!rec) return <div className="page"><Btn onClick={() => go('hub')}>До панелі</Btn></div>;
   if (stage === 'anim') return <TrophyRevealAnimation onDone={() => setStage('victory')} />;
   if (stage === 'victory') {
-    return <VictoryScreen club={rec.champion} clubName={clubName(rec.champion)} season={rec.season} points={rec.userPts}
-      actions={<><Btn onClick={() => setStage('summary')}>Переглянути підсумки сезону</Btn><Btn kind="primary" onClick={startNextSeason}>Почати наступний сезон</Btn><Btn kind="ghost" onClick={() => go('title')}>Повернутися до меню</Btn></>} />;
+    const champRow = rec.table.find((r) => r.id === rec.champion);
+    return (
+      <>
+        <WinnerScreen winnerClub={rec.champion} season={rec.season} points={champRow?.pts ?? rec.userPts} isUser={mine}
+          actions={<>
+            <Btn kind="primary" onClick={startNextSeason}>Почати наступний сезон</Btn>
+            <Btn kind="blue" onClick={() => setStage('summary')}>Переглянути підсумки сезону</Btn>
+            <Btn kind="silver" onClick={() => go('title')}>Повернутися до меню</Btn>
+            <Btn kind="danger" onClick={() => setReset(true)}>Почати спочатку</Btn>
+          </>} />
+        {reset && <ResetFlow onClose={() => setReset(false)} />}
+      </>
+    );
   }
   const w = rec.userResults.filter((m) => (m.home ? m.score[0] > m.score[1] : m.score[1] > m.score[0])).length;
   const d = rec.userResults.filter((m) => m.score[0] === m.score[1]).length;
@@ -52,8 +63,8 @@ export function Ceremony() {
         <div className="panel"><h3>Трансфери сезону</h3>{rec.transfers.length === 0 ? <p className="muted">Гучних переходів не було.</p> : <div className="evlist">{rec.transfers.map((t, i) => <div key={i}><span className="m">Тур {t.round + 1}</span><span><b>{unitName(t.unitId)}</b> → {clubName(t.club)}{t.from ? ` (із «${clubName(t.from)}»)` : ''}</span></div>)}</div>}</div>
         <div className="row wrap" style={{ justifyContent: 'center' }}>
           <Btn kind="primary big" onClick={startNextSeason}>Почати наступний сезон</Btn>
-          {mine && <Btn onClick={() => setStage('victory')}>До святкового екрана</Btn>}
-          <Btn onClick={() => go('title')}>Повернутися до меню</Btn>
+          <Btn kind="blue" onClick={() => setStage('victory')}>До екрана чемпіона</Btn>
+          <Btn kind="silver" onClick={() => go('title')}>Повернутися до меню</Btn>
           <Btn kind="danger" onClick={() => setReset(true)}>Почати спочатку</Btn>
         </div>
         <p className="muted center" style={{ fontSize: 12.5 }}>У новому сезоні зберігаються клуб, гравці, мегатрансфери та медіакоїни. Суперники стануть трохи сильнішими й зможуть купувати світових зірок.</p>

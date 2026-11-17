@@ -29,12 +29,11 @@ export function Icon({ name, size = 20, color = 'currentColor', style }: { name:
 }
 
 export function RarityIcon({ rarity, size = 20 }: { rarity: Rarity; size?: number }) {
-  const r = RARITY[rarity];
-  return r.icon ? <Icon name={r.icon} size={size} color={r.color} /> : null;
+  return <img className="rar-icon" src={assetUrl(RARITY[rarity].iconSrc)} width={size} height={size} alt="" style={{ width: size, height: size }} />;
 }
 
 export function Logo({ club, size = 40, src }: { club?: string; size?: number; src?: string }) {
-  const path = src ?? (club ? CLUB_BY_ID[club]?.logo : 'assets/imi/imi.png') ?? 'assets/imi/imi.png';
+  const path = src ?? (club ? CLUB_BY_ID[club]?.logo : 'assets/ui/branding/imi-round-original.svg') ?? 'assets/ui/branding/imi-round-original.svg';
   return <img className="logo" src={assetUrl(path)} width={size} height={size} alt="" loading="lazy" style={{ width: size, height: size }} />;
 }
 
