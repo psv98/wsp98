@@ -482,3 +482,15 @@ input[type='range'] { height: 36px; }
 .tile-ic { width: 50px; height: 50px; }
 .tile-tx b { font-size: 21px; }
 @media (max-width: 640px) { .menu-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* Екран мегатрансферу: декор (прожектори, частинки) не розтягує сторінку; картка вміщується в екран без прокрутки */
+.reveal-bg { position: fixed; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
+.reveal { overflow-x: hidden; justify-content: center; padding-top: calc(48px + var(--safe-t)); gap: 10px; }
+.reveal .stage .gcard { --cw: clamp(120px, calc((100dvh - 380px) / 2.75), 230px); }
+.reveal .stage.n2 .gcard, .reveal .stage.n3 .gcard { --cw: clamp(96px, min(29vw, calc((100dvh - 380px) / 2.75)), 210px); }
+.reveal .head { font-size: clamp(24px, 5vw, 46px); }
+@media (max-height: 560px) { .reveal .gc-perks { display: none; } }
+.reveal .stage .gcard { --cw: clamp(84px, calc((100dvh - 410px) / 2.75), 230px); }
+@media (max-height: 560px) { .reveal { padding-top: calc(8px + var(--safe-t)); gap: 4px; } .reveal .sub { display: none; } .reveal .head { font-size: 22px; } .reveal .skip { top: 4px; } }
+.reveal .gc-perks { width: max(100%, min(300px, 80vw)); align-self: center; font-size: 12.5px; }
+.reveal .stage.n2 .gc-perks, .reveal .stage.n3 .gc-perks { width: 100%; font-size: 11px; }
