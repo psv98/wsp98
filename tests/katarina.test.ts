@@ -20,7 +20,7 @@ describe('Катаріна Матернова', () => {
     expect(k.gender).toBe('female');
     expect(k.rarity).toBe('epic');
     expect(RARITY[k.rarity].color).toBe('#347DE0');
-    expect(k.user.q).toBe(89);
+    expect(k.user.q).toBe(87);
     expect(k.title).toBe('Повітряна блискавка');
     expect(k.ability).toBe('Європейські ножиці');
     expect(k.img).toBe('assets/specials/eu.png'); // емблема ЄС, не логотип ІМІ
