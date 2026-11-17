@@ -10,6 +10,9 @@ import { genericPlayer } from './squad';
 import type { CardDrop, ClubState, PlayerState, SaveState, TransferLogEntry } from './types';
 
 const T = B.transfers;
+/** Рідний клуб Оксани Романюк: саме його вона залишає, переходячи до користувача. */
+export const OKSANA_HOME = 'suspilne';
+
 export const UNIT_BY_ID: Record<string, TransferUnit> = Object.fromEntries(TRANSFER_UNITS.map((u) => [u.id, u]));
 for (const s of STARS) UNIT_BY_ID[s.id] = { id: s.id, rarity: s.rarity, members: [s.id] };
 
@@ -43,10 +46,14 @@ export function rollCard(state: SaveState, rng: Rng): CardDrop | null {
   const perRarity: Record<string, number> = {};
   for (const u of TRANSFER_UNITS) perRarity[u.rarity] = (perRarity[u.rarity] ?? 0) + 1;
   type Opt = { drop: CardDrop; w: number };
+  const oksanaFrom = state.userClub === OKSANA_HOME ? undefined : OKSANA_HOME;
   const opts: Opt[] = cands.map(({ unit, steal }) => ({
-    drop: { kind: 'unit', unitId: unit.id, from: steal ? unitOwner(state, unit)! : undefined } as CardDrop,
-    w: ((T.weights as Record<string, number>)[unit.rarity] / perRarity[unit.rarity]) * (steal ? T.stealFactor : 1),
+    drop: { kind: 'unit', unitId: unit.id, from: unit.id === 'oksana' ? oksanaFrom : steal ? unitOwner(state, unit)! : undefined } as CardDrop,
+    // перехід Оксани із «Суспільного» — звичайна божественна рідкісність, без додаткового штрафу
+    w: ((T.weights as Record<string, number>)[unit.rarity] / perRarity[unit.rarity]) * (steal && unit.id !== 'oksana' ? T.stealFactor : 1),
   }));
+  // якщо користувач керує «Суспільним», Оксана гарантовано зʼявляється в клубі до кінця сезону
+  if (state.userClub === OKSANA_HOME && !state.transfers.owners['oksana'] && state.round + 1 >= T.oksanaForceRound) return { kind: 'unit', unitId: 'oksana' };
   const E = B.economy;
   // джекпот — не частіше одного разу за сезон і лише коли ринок закрито
   if (!marketOpen(state) && state.transfers.jackpotSeason !== state.season) {
@@ -129,7 +136,7 @@ export function aiTransfers(state: SaveState, rng: Rng, reserved?: string): Tran
   const out: TransferLogEntry[] = [];
   const roundNo = state.round + 1; // номер щойно зіграного туру
   const aiClubs = Object.keys(state.clubs).filter((id) => id !== state.userClub);
-  const free = () => TRANSFER_UNITS.filter((u) => u.id !== reserved && !unitOwner(state, u) && unitAllowedByLock(state, u));
+  const free = () => TRANSFER_UNITS.filter((u) => u.id !== reserved && u.id !== 'oksana' && !unitOwner(state, u) && unitAllowedByLock(state, u));
   const clubsWithout = () => { const c = aiClubs.filter((id) => state.clubs[id].megaTransfers.length === 0); return c.length ? c : aiClubs; };
   if (roundNo >= T.aiFromRound) {
     if (state.transfers.aiCount < T.aiMaxPerSeason && rng() < T.aiRoundChance) {
@@ -140,10 +147,10 @@ export function aiTransfers(state: SaveState, rng: Rng, reserved?: string): Tran
         state.transfers.aiCount++;
       }
     }
-    // Оксана має зʼявитися хоча б в одному клубі протягом сезону
-    if (roundNo >= T.oksanaForceRound && !state.transfers.owners['oksana'] && reserved !== 'oksana') {
-      const cs = clubsWithout();
-      out.push(giveUnit(state, cs[Math.floor(rng() * cs.length)], 'oksana', 'mega'));
+    // Оксана Романюк завжди починає в «Суспільне Юнайтед»: приєднується до нього, щойно суперникам дозволені трансфери.
+    // До користувача вона може потрапити лише «сюжетним переходом» звідти.
+    if (!state.transfers.owners['oksana'] && reserved !== 'oksana' && state.userClub !== OKSANA_HOME) {
+      out.push(giveUnit(state, OKSANA_HOME, 'oksana', 'mega'));
     }
     if (state.season >= T.aiStarsFromSeason && rng() < T.aiStarChance) {
       const st = STARS.filter((s) => !state.transfers.owners[s.id]);

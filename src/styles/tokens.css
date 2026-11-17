@@ -1,16 +1,26 @@
 /* Дизайн-система: кольори, типографіка, тривалості, радіуси. Єдине джерело стилів для всіх компонентів. */
 :root {
-  --bg: #070d1a;
-  --bg2: #0b1426;
-  --panel: #111c33;
-  --panel2: #18274a;
-  --line: rgba(255, 255, 255, 0.09);
-  --text: #eef3fb;
-  --muted: #94a5c2;
-  --gold: #f5c542;
-  --green: #2fbf71;
-  --red: #ef4b5a;
-  --blue: #3d8bfd;
+  /* айдентика «Білого суперкубка» */
+  --sc-white: #f7f7f2;
+  --sc-gold: #ddbb64;
+  --sc-silver: #d9dddf;
+  --sc-green: #123c30;
+
+  --bg: #05120e;
+  --bg2: #081b15;
+  --panel: #0d261e;
+  --panel2: #14382c;
+  --panel3: #1b4a3a;
+  --line: rgba(217, 221, 223, 0.12);
+  --line-gold: rgba(221, 187, 100, 0.35);
+  --text: var(--sc-white);
+  --muted: #9fb8ad;
+  --gold: #e8c76c;
+  --gold-hi: #fbe7a8;
+  --gold-lo: #b88f32;
+  --green: #3fd08a;
+  --red: #f0505f;
+  --blue: #4fb6e8;
   --pitch: #2a8540;
 
   /* рідкісність (дублює data/rarity.ts для CSS-ефектів) */
@@ -21,15 +31,17 @@
   --r-rare: #28b884;
   --r-common: #9aa7b5;
 
-  --font-head: 'Unbounded', 'Segoe UI', system-ui, sans-serif;
-  --font-body: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-head: 'Sofia Sans Extra Condensed', 'Arial Narrow', 'Segoe UI', system-ui, sans-serif;
+  --font-num: 'Tektur', 'Sofia Sans Extra Condensed', system-ui, sans-serif;
+  --font-body: 'Golos Text', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
 
+  --skew: 12px; /* зріз кутів аркадних кнопок */
   --radius: 14px;
   --radius-sm: 9px;
   --t-fast: 0.15s;
   --t-med: 0.3s;
   --t-slow: 0.7s;
-  --shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  --shadow: 0 12px 34px rgba(0, 0, 0, 0.55);
   --safe-b: env(safe-area-inset-bottom, 0px);
   --safe-t: env(safe-area-inset-top, 0px);
 }

@@ -80,19 +80,3 @@ export function Toast() {
   const { toast } = useApp();
   return toast ? <div className={`toast ${toast.kind === 'err' ? 'err' : ''}`} role="status">{toast.text}</div> : null;
 }
-
-/** Кубок турніру (оригінальна векторна графіка). */
-export function Cup({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 120 140" className={className} aria-hidden="true">
-      <defs>
-        <linearGradient id="cupg" x1="0" x2="1"><stop offset="0" stopColor="#dfe8f7" /><stop offset=".45" stopColor="#ffffff" /><stop offset="1" stopColor="#aebcd6" /></linearGradient>
-        <linearGradient id="cupb" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="#f5c542" /><stop offset="1" stopColor="#b88212" /></linearGradient>
-      </defs>
-      <path d="M28 14h64v26c0 24-13 40-32 44-19-4-32-20-32-44z" fill="url(#cupg)" stroke="#8fa0bf" strokeWidth="2" />
-      <path d="M28 22H10c0 20 8 32 24 36M92 22h18c0 20-8 32-24 36" fill="none" stroke="url(#cupg)" strokeWidth="7" strokeLinecap="round" />
-      <path d="M52 84h16v18H52z" fill="#c6d2e8" /><path d="M36 102h48l6 14H30z" fill="url(#cupb)" /><rect x="24" y="116" width="72" height="12" rx="3" fill="#7a5600" />
-      <path d="M60 28l5 11 12 1.3-9 8 2.6 12L60 54l-10.6 6.3 2.6-12-9-8 12-1.300z" fill="url(#cupb)" />
-    </svg>
-  );
-}
