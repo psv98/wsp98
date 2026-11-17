@@ -10,7 +10,7 @@ export function eventLine(e: MatchEvent, clubs: [string, string]): Line | null {
   const who = e.name ?? 'Гравець';
   switch (e.type) {
     case 'kickoff': return null;
-    case 'goal': return { text: `ГОЛ! ${who} (${club})${e.text === 'pen' ? ' — з пенальті' : e.text === 'head' ? ' — головою' : ''}${e.name2 ? `. Асист: ${e.name2}` : ''}`, tone: 'goal', big: true };
+    case 'goal': return { text: `ГОЛ! ${who}. ${club}${e.text === 'pen' ? ' · з пенальті' : e.text === 'head' ? ' · головою' : ''}${e.name2 ? ` · асист: ${e.name2}` : ''}`, tone: 'goal', big: true };
     case 'ownGoal': return { text: `Автогол! ${who} зрізає мʼяч у власні ворота — гол на користь «${club}»`, tone: 'goal', big: true };
     case 'save': return { text: `Сейв! ${who} відбиває удар${e.name2 ? ` (${e.name2})` : ''}`, tone: 'info' };
     case 'miss': return { text: `${who} бʼє повз ворота`, tone: 'info' };

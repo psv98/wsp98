@@ -9,7 +9,8 @@ import { ROUNDS } from '../systems/season';
 import { isAvailable, teamCondition } from '../systems/squad';
 import { marketOpen } from '../systems/transfers';
 import type { MatchSummary, SaveState, TableRow, UserMatchRecord } from '../systems/types';
-import { Btn, Coins, Cup, Icon, Logo, Modal, TopBar } from './ui';
+import { ChampionshipBadge, SupercupIcon, SupercupLogo } from './supercup';
+import { Btn, Coins, Icon, Logo, Modal, TopBar } from './ui';
 
 // ---------- подвійне підтвердження скидання ----------
 export function ResetFlow({ onClose }: { onClose: () => void }) {
@@ -39,10 +40,9 @@ export function Title() {
       <div className="lamps l">{Array.from({ length: 12 }, (_, i) => <i key={i} />)}</div>
       <div className="lamps r">{Array.from({ length: 12 }, (_, i) => <i key={i} />)}</div>
       <div className="title-inner">
-        <Cup className="cup" />
-        <h1>БІЛИЙ СУПЕРКУБОК</h1>
-        <div className="scoreboard">МЕДІАЧЕМПІОНАТ · СЕЗОН 2026</div>
-        <p className="muted">18 медіаклубів. 34 тури. Один чемпіон.</p>
+        <h1 style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)' }}>БІЛИЙ СУПЕРКУБОК</h1>
+        <SupercupLogo />
+        <div className="scoreboard">18 медіаклубів. 34 тури. Один чемпіон.</div>
         <div className="title-menu">
           {save && <Btn kind="primary big" onClick={() => go(resumeScreen(save))}>Продовжити сезон</Btn>}
           <Btn kind={save ? '' : 'primary big'} disabled={!loaded} onClick={() => (save ? setReset(true) : go('select'))}>Почати гру</Btn>
@@ -107,6 +107,7 @@ export function Hub() {
   const club = s.clubs[s.userClub];
   const inj = club.players.filter((p) => p.injured > 0).length, ban = club.players.filter((p) => p.suspended > 0).length;
   const pityLeft = B.transfers.pityMatches - s.transfers.pity;
+  const champ = s.history[s.history.length - 1]?.champion;
   const tiles: [string, string, Parameters<typeof go>[0], boolean?][] = [
     ['Мій склад', `${club.formation} · стан ${teamCondition(club)}%`, 'squad', inj + ban > 0],
     ['Турнірна таблиця', `${pos} місце · ${row.pts} очок`, 'table'],
@@ -124,7 +125,8 @@ export function Hub() {
         <Logo club={def.id} size={72} />
         <div className="grow">
           <h1>{def.name}</h1>
-          <p className="muted">Сезон {s.season} · {s.round >= ROUNDS ? 'сезон завершено' : `тур ${s.round + 1} із ${ROUNDS}`}</p>
+          <p className="muted row" style={{ gap: 6, marginTop: 4 }}><SupercupIcon size={20} />Білий суперкубок · сезон {s.season} · {s.round >= ROUNDS ? 'сезон завершено' : `тур ${s.round + 1} із ${ROUNDS}`}</p>
+          {champ === s.userClub && <div style={{ marginTop: 6 }}><ChampionshipBadge label="Чинний чемпіон" /></div>}
         </div>
         <button type="button" className="iconbtn" aria-label="Головне меню" title="Головне меню" onClick={() => go('title')}><Icon name="back" /></button>
       </div>
@@ -162,7 +164,7 @@ export function Hub() {
 }
 
 // ---------- таблиця ----------
-export function TableView({ table, me }: { table: TableRow[]; me: string }) {
+export function TableView({ table, me, champion }: { table: TableRow[]; me: string; champion?: string }) {
   return (
     <div className="tblwrap">
       <table className="tbl">
@@ -171,7 +173,7 @@ export function TableView({ table, me }: { table: TableRow[]; me: string }) {
           {table.map((r, i) => (
             <tr key={r.id} className={r.id === me ? 'me' : ''}>
               <td>{i + 1}</td>
-              <td className="name"><span className="row" style={{ gap: 8 }}><Logo club={r.id} size={24} /><span className="ell">{clubName(r.id)}</span></span></td>
+              <td className="name"><span className="row" style={{ gap: 8 }}><Logo club={r.id} size={24} /><span className="ell">{clubName(r.id)}</span>{r.id === champion && <SupercupIcon size={18} title="Чинний чемпіон" />}</span></td>
               <td>{r.p}</td><td>{r.w}</td><td>{r.d}</td><td>{r.l}</td><td className="hide-sm">{r.gf}</td><td className="hide-sm">{r.ga}</td><td>{r.gd > 0 ? `+${r.gd}` : r.gd}</td><td className="pts">{r.pts}</td>
               <td className="hide-sm"><span className="form">{r.form.map((f, k) => <i key={k} className={f} />)}</span></td>
             </tr>
@@ -185,7 +187,7 @@ export function TableView({ table, me }: { table: TableRow[]; me: string }) {
 export function TableScreen() {
   const { save } = useApp();
   const s = save!;
-  return (<><TopBar title="Турнірна таблиця" /><div className="page grid"><div className="panel"><TableView table={tableOf(s)} me={s.userClub} /></div><p className="muted" style={{ fontSize: 12 }}>І — ігри, В — перемоги, Н — нічиї, П — поразки, ЗГ/ПГ — забиті/пропущені, РМ — різниця мʼячів, О — очки. Сортування: очки → різниця → забиті голи.</p></div></>);
+  return (<><TopBar title="Турнірна таблиця" /><div className="page grid"><div className="panel"><h3 className="row" style={{ gap: 8 }}><SupercupIcon size={22} />Білий суперкубок · сезон {s.season}</h3><TableView table={tableOf(s)} me={s.userClub} champion={s.history[s.history.length - 1]?.champion} /></div><p className="muted" style={{ fontSize: 12 }}>{s.history.length > 0 && <><SupercupIcon size={14} /> — чинний чемпіон. </>}І — ігри, В — перемоги, Н — нічиї, П — поразки, ЗГ/ПГ — забиті/пропущені, РМ — різниця мʼячів, О — очки. Сортування: очки → різниця → забиті голи.</p></div></>);
 }
 
 // ---------- календар і результати ----------
@@ -331,8 +333,8 @@ export function History() {
         {s.history.length === 0 && <div className="panel center muted">Тут зʼявляться підсумки завершених сезонів. Поточний сезон — {s.season}.</div>}
         {s.history.slice().reverse().map((h) => (
           <button type="button" className="panel" style={{ textAlign: 'left' }} key={h.season} onClick={() => setOpen(s.history.indexOf(h))}>
-            <div className="row"><Logo club={h.champion} size={44} /><div className="grow"><b>Сезон {h.season}</b><div className="muted">Чемпіон: {clubName(h.champion)}</div></div><div className="center"><div className="muted" style={{ fontSize: 11 }}>Ваше місце</div><b style={{ fontFamily: 'var(--font-head)', fontSize: 22 }} className={h.userPos === 1 ? 'gold' : ''}>{h.userPos}</b></div></div>
-            <div className="row wrap" style={{ marginTop: 8 }}>{h.achievements.map((a) => <span className="chip gold" key={a}>🏅 {a}</span>)}</div>
+            <div className="row"><Logo club={h.champion} size={44} /><div className="grow"><b>Сезон {h.season}</b><div className="row wrap" style={{ gap: 6, marginTop: 2 }}><ChampionshipBadge small label={clubName(h.champion)} /></div></div><div className="center"><div className="muted" style={{ fontSize: 11 }}>Ваше місце</div><b style={{ fontFamily: 'var(--font-head)', fontSize: 22 }} className={h.userPos === 1 ? 'gold' : ''}>{h.userPos}</b></div></div>
+            <div className="row wrap" style={{ marginTop: 8 }}>{h.achievements.map((a) => /Чемпіон/.test(a) ? <ChampionshipBadge key={a} label={a} /> : <span className="chip gold" key={a}>{a}</span>)}</div>
           </button>
         ))}
       </div>
@@ -387,7 +389,7 @@ export function About() {
       <TopBar title="Про гру" back="title" />
       <div className="page grid">
         <div className="panel grid">
-          <h2>Білий суперкубок</h2>
+          <div><SupercupLogo compact /></div>
           <p>Футбольна аркада та симулятор медіачемпіонату. 18 клубів створено на основі медіа, що увійшли до Білого списку Інституту масової інформації за перше півріччя 2026 року.</p>
           <p>Ви — менеджер: обираєте склад і тактику, робите заміни, лікуєте гравців, збираєте мегатрансфери ІМІ та боретеся за трофей. Футболісти на полі діють самостійно — кожен гол, сейв і фол народжується у справжній 2D-симуляції.</p>
           <p className="muted">Це розважальний вигаданий проєкт. Реальні медіа та співробітники ІМІ — лише основа для фантазійних клубів і персонажів. Ігрові характеристики не є оцінкою їхньої роботи.</p>

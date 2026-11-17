@@ -113,7 +113,8 @@ export function MatchScreen() {
   useEffect(() => {
     const canvas = canvasRef.current!, box = boxRef.current!;
     const stars = engine.players.filter((p) => p.sp && p.sp.kind === 'star').map((p) => p.sp!.img);
-    const rend = new PitchRenderer(canvas, [{ logo: CLUB_BY_ID[fx.home].logo, color: colors[0] }, { logo: CLUB_BY_ID[fx.away].logo, color: colors[1] }], stars);
+    stars.push('assets/imi/imi-user.png', 'assets/imi/imi-opp.png');
+    const rend = new PitchRenderer(canvas, [{ logo: CLUB_BY_ID[fx.home].logo, color: colors[0], isUser: userTeam === 0 }, { logo: CLUB_BY_ID[fx.away].logo, color: colors[1], isUser: userTeam === 1 }], stars);
     rend.low = settings.lowGfx;
     rendRef.current = rend;
     const ro = new ResizeObserver(() => rend.resize(box.clientWidth, box.clientHeight));
@@ -216,9 +217,12 @@ export function MatchScreen() {
   return (
     <div className="match">
       <div className="mboard">
-        <div className="tm"><Logo club={fx.home} size={34} /><span className="ell">{names[0]}</span></div>
-        <div className="mid"><div className="score num">{engine.score[0]} : {engine.score[1]}</div><div className="clock">{engine.minLabel()}' · {halfLabel}</div></div>
-        <div className="tm r"><span className="ell">{names[1]}</span><Logo club={fx.away} size={34} /></div>
+        <div className="tm" style={{ '--tc': colors[0] } as CSSProperties}><Logo club={fx.home} size={38} /><span className="ell">{names[0]}</span>{userTeam === 0 && <span className="you">ВИ</span>}</div>
+        <div className="mid">
+          <div className="score" aria-label={`Рахунок ${engine.score[0]}:${engine.score[1]}`}><b key={`h${engine.score[0]}`} className={engine.score[0] ? 'bump' : ''}>{engine.score[0]}</b><i>:</i><b key={`a${engine.score[1]}`} className={engine.score[1] ? 'bump' : ''}>{engine.score[1]}</b></div>
+          <div className="clock">{engine.minLabel()}' · {halfLabel}</div>
+        </div>
+        <div className="tm r" style={{ '--tc': colors[1] } as CSSProperties}>{userTeam === 1 && <span className="you">ВИ</span>}<span className="ell">{names[1]}</span><Logo club={fx.away} size={38} /></div>
       </div>
       <div className="mcanvas" ref={boxRef}>
         <canvas ref={canvasRef} />
@@ -240,7 +244,7 @@ export function MatchScreen() {
         {engine.finished && (
           <div className="mpanel"><div className="box">
             <h2 className="center">Фінальний свисток</h2>
-            <div className="next" style={{ margin: '10px 0' }}><div className="side"><Logo club={fx.home} size={48} /><b>{names[0]}</b></div><div className="score num" style={{ fontFamily: 'var(--font-head)', fontSize: 30 }}>{engine.score[0]} : {engine.score[1]}</div><div className="side"><Logo club={fx.away} size={48} /><b>{names[1]}</b></div></div>
+            <div className="next" style={{ margin: '10px 0' }}><div className="side"><Logo club={fx.home} size={48} /><b>{names[0]}</b></div><div className="score num" style={{ fontFamily: 'var(--font-num)', fontSize: 34 }}>{engine.score[0]} : {engine.score[1]}</div><div className="side"><Logo club={fx.away} size={48} /><b>{names[1]}</b></div></div>
             <StatBlock st={liveStats(engine)} c1={colors[0]} c2={colors[1]} />
             <div className="center" style={{ marginTop: 12 }}><Btn kind="primary big" disabled={!!busy} onClick={() => void finish()}>{busy ?? 'Підсумки туру'}</Btn></div>
           </div></div>
@@ -311,7 +315,7 @@ export function PostMatch() {
     const c = post.card;
     if (c.kind === 'unit') {
       const it = unitItems(c.unitId);
-      return <Showcase rarity={it.rarity} isUser head={it.head} sub={c.from ? `Сюжетний перехід! ${unitName(c.unitId)} залишає «${clubName(c.from)}» і приєднується до вас.` : it.sub} items={it.items} onSkip={() => undefined}
+      return <Showcase rarity={it.rarity} isUser head={it.head} sub={c.from ? `Сюжетний перехід! ${unitName(c.unitId)} залишає «${clubName(c.from)}» і приєднується до вас.` : c.unitId === 'oksana' ? 'Вихованка клубу повертається додому — тепер вона грає за вас.' : it.sub} items={it.items} onSkip={() => undefined}
         footerNote="У вашому клубі здібності діють на повну силу."
         actions={<><Btn kind="primary" onClick={() => { if (act((st) => claimCard(st, true), 'Гравця додано до стартового складу!')) setReveal(false); }}>Одразу в основу</Btn><Btn onClick={() => { if (act((st) => claimCard(st, false), 'Гравця додано до заявки (резерв)')) setReveal(false); }}>Додати до команди (резерв)</Btn></>} />;
     }

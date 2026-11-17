@@ -168,7 +168,7 @@ export function applyRound(prev: SaveState, userResult: MatchResult, others: Map
   if (post.card) { state.transfers.pity = 0; state.transfers.drops++; } else state.transfers.pity++;
 
   // 5. Трансфери суперників (картка користувача зарезервована; комплект одразу блокує взаємовиключний)
-  const reserved = post.card?.kind === 'unit' && !post.card.from ? post.card.unitId : undefined;
+  const reserved = post.card?.kind === 'unit' && (!post.card.from || post.card.unitId === 'oksana') ? post.card.unitId : undefined;
   if (reserved === 'trio' || reserved === 'duo') state.transfers.legendaryLock = reserved;
   post.aiTransfers = aiTransfers(state, rng, reserved);
 

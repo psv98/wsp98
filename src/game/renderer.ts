@@ -8,7 +8,11 @@ import { loadImage } from './assets';
 const P = B.pitch;
 const L = P.L, W = P.W;
 
-export interface RenderTeam { logo: string; color: string }
+export interface RenderTeam { logo: string; color: string; isUser?: boolean }
+
+// На полі персонажі ІМІ мають окремі емблеми: біла літера — команда гравця, жовта — команда суперника.
+const IMI_USER = 'assets/imi/imi-user.png';
+const IMI_OPP = 'assets/imi/imi-opp.png';
 
 function mulberry(a: number) {
   return () => { a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
@@ -28,7 +32,7 @@ export class PitchRenderer {
 
   constructor(private canvas: HTMLCanvasElement, private teams: [RenderTeam, RenderTeam], extraImgs: string[]) {
     this.ctx = canvas.getContext('2d', { alpha: false })!;
-    for (const path of [teams[0].logo, teams[1].logo, 'assets/imi/imi.png', ...extraImgs]) {
+    for (const path of [teams[0].logo, teams[1].logo, IMI_USER, IMI_OPP, ...extraImgs]) {
       loadImage(path).then((img) => { if (!this.destroyed) { this.imgs.set(path, img); this.sprites.clear(); } }).catch(() => undefined);
     }
   }
@@ -68,14 +72,14 @@ export class PitchRenderer {
     const g = c.getContext('2d')!;
     g.scale(this.dpr, this.dpr);
     const s = this.s, m = this.margin;
-    g.fillStyle = '#0b1220'; g.fillRect(0, 0, this.w, this.h);
+    g.fillStyle = '#030c09'; g.fillRect(0, 0, this.w, this.h);
     // орієнтуємо систему координат поля
     g.save();
     if (this.portrait) { g.translate(this.ox + W * s, this.oy); g.rotate(Math.PI / 2); } else g.translate(this.ox, this.oy);
     g.scale(s, s);
     // трибуни (основа)
-    g.fillStyle = '#18233a'; g.fillRect(-m, -m, L + 2 * m, W + 2 * m);
-    g.fillStyle = '#22314f';
+    g.fillStyle = '#0b241c'; g.fillRect(-m, -m, L + 2 * m, W + 2 * m);
+    g.fillStyle = '#143a2d';
     g.fillRect(-m, -m, L + 2 * m, m - 1); g.fillRect(-m, W + 1, L + 2 * m, m - 1);
     g.fillRect(-m, -m, m - 1, W + 2 * m); g.fillRect(L + 1, -m, m - 1, W + 2 * m);
     // газон зі смугами
@@ -132,7 +136,7 @@ export class PitchRenderer {
       if (this.portrait) { cg.translate(this.ox + W * s, this.oy); cg.rotate(Math.PI / 2); } else cg.translate(this.ox, this.oy);
       cg.scale(s, s);
       const rnd = mulberry(7);
-      const cols = [this.teams[0].color, this.teams[1].color, '#e8edf5', '#f4d35e', '#c4cde0', '#8fa3c7'];
+      const cols = [this.teams[0].color, this.teams[1].color, '#e8edf5', '#DDBB64', '#D9DDDF', '#8fb3a4'];
       const step = Math.max(1.05, 4.2 / s);
       const dot = step * 0.36;
       for (let x = -m + step / 2; x < L + m; x += step) {
@@ -205,7 +209,8 @@ export class PitchRenderer {
         let sp: HTMLCanvasElement;
         if (p.sp) {
           const col = RARITY[p.sp.rarity].color;
-          sp = this.sprite(p.sp.img, this.imgs.get(p.sp.img), col, Math.max(2.2, r * 0.2), !this.low);
+          const img = p.sp.kind === 'imi' ? (this.teams[p.team].isUser ? IMI_USER : IMI_OPP) : p.sp.img;
+          sp = this.sprite(img, this.imgs.get(img), col, Math.max(2.2, r * 0.2), !this.low);
           labels.push(p);
         } else {
           const t = this.teams[p.team];

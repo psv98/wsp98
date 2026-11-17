@@ -150,13 +150,13 @@ describe('мегатрансфери', () => {
   });
   it('унікальний персонаж грає лише за один клуб; перехід забирає його в колишнього клубу', () => {
     const s = fresh();
-    giveUnit(s, 'nv', 'oksana', 'mega');
-    expect(s.clubs.nv.megaTransfers).toContain('oksana');
+    giveUnit(s, 'suspilne', 'oksana', 'mega');
+    expect(s.clubs.suspilne.megaTransfers).toContain('oksana');
     const e = giveUnit(s, 'texty', 'oksana', 'mega');
-    expect(e.kind).toBe('steal'); expect(e.from).toBe('nv');
-    expect(s.clubs.nv.players.some((p) => p.special === 'oksana')).toBe(false);
-    expect(s.clubs.nv.megaTransfers).not.toContain('oksana');
-    expect(s.clubs.nv.players).toHaveLength(24);
+    expect(e.kind).toBe('steal'); expect(e.from).toBe('suspilne');
+    expect(s.clubs.suspilne.players.some((p) => p.special === 'oksana')).toBe(false);
+    expect(s.clubs.suspilne.megaTransfers).not.toContain('oksana');
+    expect(s.clubs.suspilne.players).toHaveLength(24);
     let owners = 0;
     for (const c of Object.values(s.clubs)) owners += c.players.filter((p) => p.special === 'oksana').length;
     expect(owners).toBe(1);
@@ -169,9 +169,31 @@ describe('мегатрансфери', () => {
     let got = 0;
     for (let i = 0; i < 200; i++) { s.round = 4; got += aiTransfers(s, rng).length; }
     expect(got).toBeGreaterThan(0);
-    expect(got).toBeLessThanOrEqual(B.transfers.aiMaxPerSeason);
+    expect(got).toBeLessThanOrEqual(B.transfers.aiMaxPerSeason + 1); // +1 — обовʼязкова поява Оксани в «Суспільному»
     expect(Object.values(s.transfers.owners).every((c) => c !== 'texty')).toBe(true);
   });
+  it('Оксана Романюк завжди починає в «Суспільне Юнайтед» і переходить до користувача саме звідти', () => {
+    const rng = makeRng(11);
+    const s = fresh();
+    s.round = 3; aiTransfers(s, rng);
+    expect(s.transfers.owners.oksana).toBeUndefined(); // до 5-го туру суперники без трансферів
+    s.round = 4; aiTransfers(s, rng);
+    expect(s.transfers.owners.oksana).toBe('suspilne');
+    for (let i = 0; i < 300; i++) { s.round = 10; s.transfers.aiCount = 0; for (const t of aiTransfers(s, rng)) expect(t.unitId).not.toBe('oksana'); }
+    s.transfers.pity = 9;
+    let seen = 0;
+    for (let i = 0; i < 6000; i++) { const c = rollCard(s, rng)!; if (c.kind === 'unit' && c.unitId === 'oksana') { seen++; expect(c.from).toBe('suspilne'); } }
+    expect(seen).toBeGreaterThan(0);
+    // ще до появи в «Суспільному» картка також оформлюється як перехід звідти
+    const early = fresh(); early.transfers.pity = 9;
+    for (let i = 0; i < 6000; i++) { const c = rollCard(early, rng)!; if (c.kind === 'unit' && c.unitId === 'oksana') expect(c.from).toBe('suspilne'); }
+    // менеджер «Суспільного»: Оксана не йде до суперників і гарантовано зʼявляється наприкінці сезону
+    const own = fresh('suspilne'); own.round = 10; aiTransfers(own, rng);
+    expect(own.transfers.owners.oksana).toBeUndefined();
+    own.round = 30; own.transfers.pity = 9;
+    expect(rollCard(own, rng)).toEqual({ kind: 'unit', unitId: 'oksana' });
+  });
+
   it('всі 14 персонажів ІМІ присутні в пулі', () => {
     expect(IMI_SPECIALS).toHaveLength(14);
     expect(new Set(TRANSFER_UNITS.flatMap((u) => u.members)).size).toBe(14);
