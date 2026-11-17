@@ -95,6 +95,7 @@ export function Showcase({ rarity, head, sub, items, isUser, actions, onSkip, dr
   const [shown, setShown] = useState(drum ? -1 : 0); // -1 — картка ще закрита
   const r = RARITY[rarity];
   const parts = useMemo(() => particles(settings.lowGfx ? 0 : rarity === 'divine' ? 46 : rarity === 'mythic' ? 34 : 20), [rarity, settings.lowGfx]);
+  const partsN = shown < 0 ? Math.min(parts.length, 16) : parts.length; // кількість частинок теж не видає рідкісність
 
   useEffect(() => {
     if (drum) audio.sfx('drum'); else audio.sfx('alert');
@@ -107,15 +108,18 @@ export function Showcase({ rarity, head, sub, items, isUser, actions, onSkip, dr
   }, []);
 
   const done = shown >= items.length;
+  // поки картку не відкрито — жодних підказок: нейтральні колір, рамка й заголовок
+  const hidden = shown < 0;
+  const neutral = RARITY.common;
   return (
-    <div className={`reveal ${rarity}`} style={{ '--rc': r.color } as CSSProperties}>
+    <div className={`reveal ${hidden ? 'hidden-card' : rarity}`} style={{ '--rc': hidden ? '#ffffff' : r.color } as CSSProperties}>
       <div className="spot s1" /><div className="spot s2" />
-      <div className="parts">{parts.map((p, i) => <i key={i} style={{ left: p.left, animationDuration: p.dur, animationDelay: p.delay, '--dx': p.dx } as CSSProperties} />)}</div>
+      <div className="parts">{parts.slice(0, partsN).map((p, i) => <i key={i} style={{ left: p.left, animationDuration: p.dur, animationDelay: p.delay, '--dx': p.dx } as CSSProperties} />)}</div>
       {onSkip && !done && <div className="skip"><Btn kind="small silver" onClick={() => setShown(items.length)}>Пропустити ⏭</Btn></div>}
-      <div className="head">{head}</div>
-      {sub && <div className="sub">{sub}</div>}
+      {hidden ? <div className="head">МЕГАТРАНСФЕР</div> : <div className="head" key="h">{head}</div>}
+      {!hidden && sub && <div className="sub">{sub}</div>}
       <div className={`stage n${items.length}`}>
-        {shown < 0 && <div className="flip-wait"><div className="gcard"><div className="gc-frame back" style={{ backgroundImage: `url(${assetUrl(r.frame)})` }}><span className="gc-qmark">?</span></div></div></div>}
+        {shown < 0 && <div className="flip-wait"><div className="gcard"><div className="gc-frame gc-back" style={{ backgroundImage: `url(${assetUrl(neutral.frame)})` }}><span className="gc-qmark">?</span></div></div></div>}
         {items.map((it, i) => i < Math.max(shown, 0) && (
           <div className="flip" key={i}>
             {it.special ? <PlayerCard sp={SPECIAL_BY_ID[it.special]} isUser={isUser} /> : <JackpotCard amount={it.jackpot ?? it.sponsor ?? 0} sponsor={it.sponsor != null} />}

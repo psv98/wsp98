@@ -98,7 +98,7 @@ export function MatchScreen() {
   const boxRef = useRef<HTMLDivElement>(null);
   const rendRef = useRef<PitchRenderer | null>(null);
   const paused = useRef(false);
-  const speed = useRef(2); // за замовчуванням ×2, можна ×1 або ×4
+  const speed = useRef(2); // швидкості ×2 (за замовчуванням) і ×4
   const [, force] = useState(0);
   const [lines, setLines] = useState<{ min: string; line: Line }[]>([]);
   const [banner, setBanner] = useState<{ line: Line; key: number } | null>(null);
@@ -287,8 +287,8 @@ export function MatchScreen() {
         <button type="button" className="mbtn" aria-label="Вийти з матчу" onClick={() => setPanel('exit')}><Icon name="cross" size={18} /></button>
         <div className="ticker ell" onClick={() => setPanel('log')} role="button" tabIndex={0}>{last ? <><b className="gold">{last.min}'</b> <b>{last.line.text}</b></> : 'Матч починається…'}</div>
         <button type="button" className={`mbtn ${userPaused ? 'on' : ''}`} aria-label={userPaused ? 'Продовжити' : 'Пауза'} title={userPaused ? 'Продовжити' : 'Пауза'} disabled={engine.finished} onClick={() => setUserPaused((v) => !v)}><Icon name={userPaused ? 'play' : 'pause'} size={18} /></button>
-        {[1, 2, 4].map((v) => <button type="button" key={v} className={`mbtn spd ${speed.current === v ? 'on' : ''}`} onClick={() => setSpeed(v)} title={`Швидкість ×${v}`}>×{v}</button>)}
-        <button type="button" className={`mbtn spd-cycle ${speed.current > 1 ? 'on' : ''}`} onClick={() => setSpeed(speed.current === 1 ? 2 : speed.current === 2 ? 4 : 1)} aria-label={`Швидкість ×${speed.current}, змінити`}>×{speed.current}</button>
+        {[2, 4].map((v) => <button type="button" key={v} className={`mbtn spd ${speed.current === v ? 'on' : ''}`} onClick={() => setSpeed(v)} title={`Швидкість ×${v}`}>×{v}</button>)}
+        <button type="button" className={`mbtn spd-cycle ${speed.current === 4 ? 'on' : ''}`} onClick={() => setSpeed(speed.current === 4 ? 2 : 4)} aria-label={`Швидкість ×${speed.current}, змінити`}>×{speed.current}</button>
         <button type="button" className="mbtn txt" onClick={() => setPanel('subs')} disabled={engine.finished}>Заміни</button>
         <button type="button" className="mbtn txt" onClick={() => setPanel('tactics')} disabled={engine.finished}>Тактика</button>
         <button type="button" className="mbtn" onClick={() => setPanel('instant')} disabled={engine.finished} title="Миттєвий результат">⏭</button>

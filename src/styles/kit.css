@@ -164,7 +164,7 @@ body { background: var(--bg); }
 .gcard.elsewhere .gc-frame { filter: grayscale(0.55) brightness(0.8); }
 .gcard.elsewhere .gc-status { color: #ffb3bb; }
 .gcard.jackpot .gc-plate span { font-family: var(--font-num); font-style: normal; font-size: 7.4cqw; color: var(--gold-hi); }
-.gc-frame.back { animation: shake 0.18s linear infinite; }
+.gc-frame.gc-back { animation: shake 0.18s linear infinite; }
 .gc-qmark { position: absolute; left: 50%; top: 34.7%; transform: translate(-50%, -50%); font-family: var(--font-num); font-size: 34cqw; color: #fff; text-shadow: 0 0 20px var(--rc); }
 .cardgrid { grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); gap: 12px 10px; align-items: start; }
 .cardgrid .gcard { max-width: 210px; }
@@ -236,7 +236,7 @@ body { background: var(--bg); }
   .v-cup .sc-icon { width: 110px !important; height: 110px !important; }
 }
 @media (min-width: 1600px) { .page { max-width: 1400px; } body { font-size: 17px; } .gcard { --cw: 240px; } }
-@media (prefers-reduced-motion: reduce) { .title-cup, .v-cup, .gc-frame.back { animation: none !important; } }
+@media (prefers-reduced-motion: reduce) { .title-cup, .v-cup, .gc-frame.gc-back { animation: none !important; } }
 .grid > *, .squad > * { min-width: 0; }
 @media (max-width: 400px) { .tbl td, .tbl th { padding-left: 2px; padding-right: 2px; } .tbl .logo { width: 20px !important; height: 20px !important; } }
 
@@ -458,3 +458,10 @@ input[type='range'] { height: 36px; }
 .fat-warn .actions .btn { width: 100%; min-width: 0; }
 .fat-warn .actions .btn { flex: none; }
 @media (max-width: 420px) { .mboard .tm .nm-full { display: none !important; } .mboard .tm .nm-abbr { display: inline !important; } }
+
+/* закрита картка мегатрансферу: нейтральна, без кольору рідкісності */
+.reveal.hidden-card .gc-frame { filter: drop-shadow(0 0 22px rgba(255, 255, 255, 0.45)); }
+.reveal .head { animation: headIn 0.7s both; }
+.reveal .flip-wait { animation: none; box-shadow: none; }
+.reveal.hidden-card .gc-frame.gc-back { animation: shake 0.18s linear infinite, backGlow 0.9s ease-in-out infinite alternate; }
+@keyframes backGlow { from { filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.3)); } to { filter: drop-shadow(0 0 34px rgba(255, 255, 255, 0.85)); } }
