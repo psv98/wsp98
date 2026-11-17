@@ -60,7 +60,7 @@ function ballFuture(m: MatchEngine, t: number): [number, number] {
   const b = m.ball;
   const v = Math.hypot(b.vx, b.vy);
   if (v < 0.01) return [b.x, b.y];
-  const fr = S.ballFriction;
+  const fr = S.ballFriction * m.wx.friction;
   const ts = Math.min(t, v / fr);
   const s = v * ts - 0.5 * fr * ts * ts;
   return [b.x + (b.vx / v) * s, b.y + (b.vy / v) * s];
@@ -131,7 +131,8 @@ export function updateTargets(m: MatchEngine) {
         cx = c.x + c.vx * 0.2; cy = c.y + c.vy * 0.2;
         const danger = c.fx?.finish != null || c.fx?.finishDanger != null;
         // другий пресингує лише біля власних воріт; проти зіркового форварда — на всій своїй половині
-        if (m.adv(t, c.x) > (danger ? 60 : 42) || c.role === 'GK') chaser2 = null;
+        const pressing = m.orderOf(t) === 'press';
+        if (m.adv(t, c.x) > (pressing ? 95 : danger ? 60 : 42) || c.role === 'GK') chaser2 = null;
         if (c.role === 'GK' && m.inOwnBox(c)) chaser = null;
       }
     }
@@ -165,7 +166,8 @@ export function updateTargets(m: MatchEngine) {
       }
       if (p.role === 'GK') { keeperTarget(m, p, dir); continue; }
       const sl = slots[p.slot];
-      let a = sl.x * L + (ballAdv - L / 2) * (inPoss ? 0.62 : 0.52) + (inPoss ? 7 : -5);
+      const ord = m.orderOf(t);
+      let a = sl.x * L + (ballAdv - L / 2) * (inPoss ? 0.62 : 0.52) + (inPoss ? 7 : -5) + (ord ? (inPoss ? B.orders[ord].lineAtk : B.orders[ord].lineDef) : 0);
       let y = sl.y * W + (ballYo - W / 2) * 0.22;
       p.sprint = false;
       if (inPoss) {
@@ -240,7 +242,8 @@ export function carrierAct(m: MatchEngine, p: SimPlayer, dt: number) {
     const gkAway = !oppGk || dist(oppGk.x, oppGk.y, gx, CY) > 22;
     const dy = Math.abs(p.y - CY);
     // зіркові форварди не бʼють здалеку — шукають вірну позицію
-    const range = (p.fx?.finish != null || p.fx?.finishDanger != null ? 19 : S.shootRange) * (p.fx?.power ?? 1);
+    const ord = m.orderOf(t);
+    const range = (p.fx?.finish != null || p.fx?.finishDanger != null ? 19 : S.shootRange) * (p.fx?.power ?? 1) * (ord === 'attack' ? B.orders.attack.shootRange : ord === 'hold' ? B.orders.hold.shootRange : 1);
     if (gkAway && dGoal < S.emptyNetRange && a > L / 2 - 8) { m.shoot(p); return; }
     if (dGoal < range) {
       const cos = clamp(((L - a) / (dGoal || 1)) * 1.25, 0, 1);

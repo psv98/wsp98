@@ -447,3 +447,38 @@ input[type='range'] { height: 36px; }
 .btn, .mbtn, .tabs button { transition: filter var(--t-fast), transform var(--t-fast); will-change: filter; }
 .btn:hover:not(:disabled), .mbtn:hover:not(:disabled), .tabs button:hover:not(:disabled) { filter: brightness(1.12) saturate(1.05); }
 .btn:active:not(:disabled), .mbtn:active:not(:disabled), .tabs button:active:not(:disabled) { filter: brightness(0.9); transform: translateY(2px); }
+
+/* ================= Графіка з набору: іконки, монета, досягнення, баннер ================= */
+.coin-ic { width: 18px; height: 18px; flex: none; object-fit: contain; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5)); }
+.tile { flex-direction: row; align-items: center; gap: 12px; }
+.tile-ic { width: 56px; height: 56px; flex: none; object-fit: contain; filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5)); transition: transform var(--t-fast); }
+.tile:hover .tile-ic { transform: scale(1.08) rotate(-3deg); }
+.tile-tx { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+@media (max-width: 640px) { .tile { flex-direction: column; align-items: flex-start; gap: 6px; } .tile-ic { width: 44px; height: 44px; } }
+.ach-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
+.ach { display: flex; align-items: center; gap: 10px; padding: 6px 12px 6px 6px; border-radius: 99px; background: rgba(4, 25, 30, 0.75); border: 1px solid var(--line-gold); font-family: var(--font-head); font-style: italic; font-weight: 800; font-size: 16px; text-transform: uppercase; letter-spacing: 0.03em; color: var(--gold-hi); line-height: 1.05; }
+.ach img { width: 44px; height: 44px; flex: none; object-fit: contain; filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.5)); }
+.ach.plain { padding-left: 12px; } .ach-dot { width: 10px; height: 10px; transform: rotate(45deg); background: var(--gold); flex: none; }
+.off-hero { background-image: linear-gradient(90deg, rgba(4, 19, 24, 0.94) 0%, rgba(4, 19, 24, 0.75) 45%, rgba(4, 19, 24, 0.15) 100%), var(--off-bg) !important; background-size: cover !important; background-position: center right !important; }
+.reveal .gc-frame.gc-back { background-size: contain; background-position: center; aspect-ratio: 440 / 872; }
+
+/* вказівки з бровки */
+.orders { position: absolute; left: 8px; bottom: 8px; z-index: 4; display: flex; gap: 8px; }
+.order { position: relative; width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; align-content: center; gap: 0; color: #fff; padding: 0;
+  background: radial-gradient(circle at 50% 35%, #1d5a48, #0a2019 70%); box-shadow: 0 6px 16px rgba(0, 0, 0, 0.55); border: 0; }
+.order::before { content: ''; position: absolute; inset: -3px; border-radius: 50%; background: conic-gradient(var(--oc, var(--gold)) var(--p, 360deg), rgba(255, 255, 255, 0.12) 0); -webkit-mask: radial-gradient(circle, transparent 0 calc(50% - 3px), #000 calc(50% - 2px)); mask: radial-gradient(circle, transparent 0 calc(50% - 3px), #000 calc(50% - 2px)); }
+.order .ic { font-size: 22px; line-height: 1; }
+.order .lb { font-family: var(--font-head); font-style: italic; font-weight: 800; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.02em; line-height: 1; margin-top: 2px; }
+.order.attack { --oc: #ff7a5a; } .order.press { --oc: #ffd43b; } .order.hold { --oc: #4fb6e8; }
+.order.on { background: radial-gradient(circle at 50% 35%, color-mix(in srgb, var(--oc) 60%, #123c30), #0a2019 75%); animation: pulse 1s infinite; }
+.order:disabled { opacity: 0.5; filter: grayscale(0.6); cursor: not-allowed; }
+.order:not(:disabled):hover { filter: brightness(1.15); }
+.order:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+@media (max-width: 640px) { .orders { left: 6px; bottom: 6px; gap: 6px; } .order { width: 56px; height: 56px; } .order .ic { font-size: 19px; } .order .lb { font-size: 10px; } }
+.mboard .wx { font-size: 1.05em; }
+.wx-chip { font-size: 15px; }
+
+.menu-grid { grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); }
+.tile-ic { width: 50px; height: 50px; }
+.tile-tx b { font-size: 21px; }
+@media (max-width: 640px) { .menu-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

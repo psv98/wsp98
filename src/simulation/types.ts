@@ -28,12 +28,15 @@ export interface TeamSetup {
   stormArmed?: boolean; // «Повітряний штурм Ісиченка» може статися в цьому матчі
 }
 
-export interface MatchSetup { home: TeamSetup; away: TeamSetup; seed: number; autoVar?: boolean }
+export type Weather = 'clear' | 'night' | 'rain' | 'snow';
+export type OrderKind = 'attack' | 'hold' | 'press';
+
+export interface MatchSetup { home: TeamSetup; away: TeamSetup; seed: number; autoVar?: boolean; weather?: Weather }
 
 export type EventType =
   | 'kickoff' | 'goal' | 'ownGoal' | 'shot' | 'save' | 'miss' | 'post' | 'block' | 'foul' | 'yellow' | 'red' | 'secondYellow'
   | 'injury' | 'sub' | 'corner' | 'penalty' | 'freeKick' | 'halftime' | 'fulltime' | 'golden' | 'lastAttack'
-  | 'storm' | 'stormFail' | 'var' | 'varOverturn' | 'varStands' | 'varOffer' | 'ability' | 'scissors' | 'header' | 'secondHalf' | 'pass' | 'tackle' | 'whistle';
+  | 'storm' | 'stormFail' | 'var' | 'varOverturn' | 'varStands' | 'varOffer' | 'ability' | 'scissors' | 'order' | 'header' | 'secondHalf' | 'pass' | 'tackle' | 'whistle';
 
 export interface MatchEvent {
   type: EventType;
@@ -92,6 +95,7 @@ export interface SimPlayer {
   force: { x: number; y: number } | null;
   stamina0: number; stamina: number; drain: number; timeOn: number;
   dist: number; sprintDist: number; // пробіг і ривки за матч (метри)
+  extraUsed: number; // додаткова витрата сил від вказівок і погоди
   boost: Partial<Record<BoostKey, number>>;
   on: boolean; off: null | 'sub' | 'red' | 'inj'; played: boolean;
   stun: number; tackleCd: number; decideT: number; holdT: number; immune: number;

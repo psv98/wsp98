@@ -33,13 +33,35 @@ export function RarityIcon({ rarity, size = 20 }: { rarity: Rarity; size?: numbe
   return <img className="rar-icon" src={assetUrl(RARITY[rarity].iconSrc)} width={size} height={size} alt="" style={{ width: size, height: size }} />;
 }
 
+/** Значок досягнення за текстом нагороди (картинки з public/assets/art/badges). */
+export function achievementBadge(text: string): string | null {
+  if (/Чемпіон/.test(text)) return 'champion';
+  if (/без поразок/.test(text)) return 'unbeaten';
+  if (/Сотня|голів/.test(text)) return 'goals100';
+  if (/Колекціонер/.test(text)) return 'collector';
+  if (/Хет-трик/.test(text)) return 'hattrick';
+  if (/Вольов|камбек/i.test(text)) return 'comeback';
+  return null;
+}
+
+/** Список досягнень зі значками. */
+export function Achievements({ list }: { list: string[] }) {
+  return (
+    <div className="ach-list">
+      {list.map((a) => { const b = achievementBadge(a); return (
+        <div className={`ach ${b ? '' : 'plain'}`} key={a}>{b ? <img src={assetUrl(`assets/art/badges/${b}.webp`)} alt="" width={44} height={44} loading="lazy" /> : <span className="ach-dot" aria-hidden="true" />}<span>{a}</span></div>
+      ); })}
+    </div>
+  );
+}
+
 export function Logo({ club, size = 40, src }: { club?: string; size?: number; src?: string }) {
   const path = src ?? (club ? CLUB_BY_ID[club]?.logo : 'assets/ui/branding/imi-round-original.svg') ?? 'assets/ui/branding/imi-round-original.svg';
   return <img className="logo" src={assetUrl(path)} width={size} height={size} alt="" loading="lazy" style={{ width: size, height: size }} />;
 }
 
 export function Coins({ n, sign }: { n: number; sign?: boolean }) {
-  return <span className="coin"><Icon name="coin" size={16} color="#f5c542" />{sign && n > 0 ? '+' : ''}{n.toLocaleString('uk-UA')} MC</span>;
+  return <span className="coin"><img className="coin-ic" src={assetUrl('assets/art/coin.webp')} width={18} height={18} alt="" />{sign && n > 0 ? '+' : ''}{n.toLocaleString('uk-UA')} MC</span>;
 }
 
 export function Btn({ children, onClick, kind = '', disabled, title, sound = 'click' }: { children: ReactNode; onClick?: () => void; kind?: string; disabled?: boolean; title?: string; sound?: string | null }) {

@@ -16,7 +16,7 @@ import { baseQ, playerQ } from '../systems/squad';
 import type { Deal, IncomingOffer, PlayerState, SaveState } from '../systems/types';
 import { GameCard, specialCard } from './cards';
 import { ChampionshipBadge, GoldConfetti, SupercupIcon } from './supercup';
-import { Btn, Coins, Logo, Modal, TopBar } from './ui';
+import { Achievements, Btn, Coins, Logo, Modal, TopBar } from './ui';
 
 type Tab = 'summary' | 'dev' | 'market' | 'deals' | 'offers' | 'budget' | 'prep';
 const TABS: [Tab, string][] = [
@@ -44,7 +44,7 @@ export function Offseason() {
     <>
       <TopBar title={`Міжсезоння · сезон ${s.season}`} back="hub" />
       <div className="page grid">
-        <div className="panel hero off-hero">
+        <div className="panel hero off-hero" style={{ '--off-bg': `url(${assetUrl('assets/art/offseason.webp')})` } as CSSProperties}>
           <div className="off-hero-l">
             <SupercupIcon size={64} />
             <div>
@@ -91,7 +91,7 @@ function SummaryTab({ s }: { s: SaveState }) {
           <div className="stat"><span>Зароблено</span><b className="gold">{rec.coinsEarned.toLocaleString('uk-UA')}</b></div>
         </div>
         {top && <p className="gold" style={{ marginTop: 12, fontWeight: 600 }}>⚽ {MSG.bestScorerSeason(person(top.name, top.special), top.goals)}</p>}
-        <div className="row wrap" style={{ marginTop: 10 }}>{rec.achievements.map((a) => <span className="chip gold" key={a}>{a}</span>)}</div>
+        <Achievements list={rec.achievements} />
       </div>
       <div className="panel">
         <h3>Підсумкова таблиця</h3>
