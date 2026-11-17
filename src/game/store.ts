@@ -2,11 +2,13 @@
 import { useSyncExternalStore } from 'react';
 import { clearGame, exportSave, importSave, loadBackup, loadGame, loadSettings, saveGame, saveSettings } from '../storage/db';
 import { GameError } from '../systems/actions';
+import { DevError } from '../systems/development';
+import { MarketError } from '../systems/market';
 import { newGame, nextSeason, ROUNDS } from '../systems/season';
 import { DEFAULT_SETTINGS, type SaveState, type Settings } from '../systems/types';
 import { audio } from './audio';
 
-export type Screen = 'title' | 'select' | 'hub' | 'squad' | 'table' | 'calendar' | 'results' | 'transfers' | 'coins' | 'stats' | 'history' | 'settings' | 'about' | 'prematch' | 'match' | 'post' | 'ceremony';
+export type Screen = 'title' | 'select' | 'hub' | 'squad' | 'table' | 'calendar' | 'results' | 'transfers' | 'coins' | 'stats' | 'history' | 'settings' | 'about' | 'prematch' | 'match' | 'post' | 'ceremony' | 'offseason';
 
 export interface AppState {
   loaded: boolean;
@@ -54,7 +56,7 @@ export function act(fn: (s: SaveState) => SaveState, okMsg?: string): boolean {
     if (okMsg) toast(okMsg);
     return true;
   } catch (e) {
-    if (e instanceof GameError) toast(e.message, 'err'); else { console.error(e); toast('Сталася помилка. Спробуйте ще раз.', 'err'); }
+    if (e instanceof GameError || e instanceof MarketError || e instanceof DevError) toast(e.message, 'err'); else { console.error(e); toast('Сталася помилка. Спробуйте ще раз.', 'err'); }
     return false;
   }
 }
@@ -68,7 +70,7 @@ export function go(screen: Screen) {
 /** Куди вести гравця при продовженні: незавершений підсумок туру, церемонія або панель. */
 export function resumeScreen(s: SaveState): Screen {
   if (s.pending) return 'post';
-  if (s.round >= ROUNDS) return 'ceremony';
+  if (s.round >= ROUNDS) return s.offseason ? 'offseason' : 'ceremony';
   return 'hub';
 }
 
@@ -91,6 +93,19 @@ export function startNewGame(clubId: string) {
   const save = newGame(clubId, seed);
   void commit(save, { seasonStart: true });
   set({ screen: 'hub', back: 'title' });
+}
+
+/** Виконує дію, що повертає стан і результат (наприклад, текст повідомлення). */
+export function actR<T>(fn: (s: SaveState) => { state: SaveState } & T): (T & { state: SaveState }) | null {
+  if (!state.save) return null;
+  try {
+    const r = fn(state.save);
+    if (r.state !== state.save) void commit(r.state);
+    return r;
+  } catch (e) {
+    if (e instanceof GameError || e instanceof MarketError || e instanceof DevError) toast(e.message, 'err'); else { console.error(e); toast('Сталася помилка. Спробуйте ще раз.', 'err'); }
+    return null;
+  }
 }
 
 export function startNextSeason() {

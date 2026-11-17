@@ -4,6 +4,7 @@ import { BALANCE as B } from '../data/balance';
 import { FORMATIONS, roleFit, type FormationId, type Role } from '../data/formations';
 import { SPECIAL_BY_ID } from '../data/specials';
 import { makeRng, type Rng } from './rng';
+import { accelMul, attrMul, gkMul, injuryRiskMul, miscontrolChance, powerMul, reactionLag, sigmaMul as sigmaMul_, speedMul } from './fatigue';
 import type {
   Ball, EventType, Flight, GoalInfo, MatchEvent, MatchResult, MatchSetup, Phase, PlayerInit, PlayerResult,
   Restart, RestartType, SimPlayer, TeamSetup, TeamStats,
@@ -131,9 +132,11 @@ export class MatchEngine {
     const p: SimPlayer = {
       i: this.players.length, team: team.id, pid: pi.pid, num: pi.num, nat: pi.role, slot, role, sp, fx,
       name: sp ? sp.name : `Гравець №${pi.num}`,
-      q: (fx ? fx.q : pi.q) + (team.id === 0 ? team.setup.homeBonus : 0),
+      q: Math.min(99, (fx ? fx.q : pi.q) + (pi.qBonus ?? 0)) + (team.id === 0 ? team.setup.homeBonus : 0),
       x: 0, y: 0, vx: 0, vy: 0, tx: 0, ty: 0, sprint: false, hx: team.dir, hy: 0, force: null,
-      stamina0: pi.stamina, stamina: pi.stamina, drain: S.staminaDrainStart * DRAIN_ROLE[role] * (sp ? sp.fatigue : 1), timeOn: 0,
+      // хто не втомлюється (Оксана, Ігор) — завжди 100%
+      stamina0: sp && sp.fatigue === 0 ? 100 : pi.stamina, stamina: sp && sp.fatigue === 0 ? 100 : pi.stamina,
+      drain: S.staminaDrainStart * (sp ? sp.fatigue : 1), timeOn: 0, dist: 0, sprintDist: 0, boost: pi.boost ?? {},
       on: slot >= 0, off: null, played: slot >= 0,
       stun: 0, tackleCd: 0, decideT: 0, holdT: 0, immune: 0, yellow: 0, red: 0, injury: 0,
       pts: 0, goals: 0, assists: 0, shots: 0, saves: 0, tackles: 0,
@@ -172,7 +175,8 @@ export class MatchEngine {
   inOwnBox(p: SimPlayer, x = p.x, y = p.y) { return this.adv(p.team, x) < P.boxDepth && Math.abs(y - CY) < P.boxHalf; }
 
   // ---------- характеристики ----------
-  fatigueMul(p: SimPlayer) { return S.fatigueFloor + (1 - S.fatigueFloor) * clamp(p.stamina / 70, 0, 1); }
+  /** Множник характеристик від втоми (1 — свіжий). */
+  fatigueMul(p: SimPlayer) { return attrMul(p.stamina); }
   private base(p: SimPlayer) {
     const slotRole = p.role;
     const fit = roleFit(p.nat, slotRole);
@@ -190,10 +194,11 @@ export class MatchEngine {
       case 'header': v += HEAD_OFF[p.role] + (p.fx?.header ?? 0); break;
       case 'gk': v += p.nat === 'GK' ? 0 : -8; v += t.bonus.def * 0.5; break;
     }
-    return Math.max(20, v * this.fatigueMul(p));
+    v += p.boost[k] ?? 0;
+    return Math.max(20, v * (k === 'gk' ? gkMul(p.stamina) : attrMul(p.stamina)));
   }
   speed(p: SimPlayer) {
-    return (S.baseSpeed + (p.q - 70) * S.speedPerQ * S.qEffect + S.roleSpeed[p.role]) * (p.fx?.speed ?? 1) * (0.5 + 0.5 * this.fatigueMul(p)) * (this.teams[p.team].golden > 0 ? 1.04 : 1);
+    return (S.baseSpeed + (p.q - 70) * S.speedPerQ * S.qEffect + S.roleSpeed[p.role]) * (p.fx?.speed ?? 1) * (1 + (p.boost.speed ?? 0) * 0.012) * speedMul(p.stamina) * (this.teams[p.team].golden > 0 ? 1.04 : 1);
   }
 
   // ---------- події ----------
@@ -344,7 +349,7 @@ export class MatchEngine {
     b.owner = p; b.flight = null; b.z = 0; b.vz = 0; b.vx = p.vx; b.vy = p.vy;
     b.lastTouch = p.i; b.lastTeam = p.team;
     this.poss = p.team;
-    p.holdT = 0; p.decideT = 0.12 + this.rng() * 0.2; p.immune = 0.4;
+    p.holdT = 0; p.decideT = 0.12 + this.rng() * 0.2 + reactionLag(p.stamina); p.immune = 0.4;
     p.dive = null;
   }
 
@@ -365,7 +370,7 @@ export class MatchEngine {
     let tx = mate.x + mate.vx * tEst * 0.85, ty = mate.y + mate.vy * tEst * 0.85;
     tx = clamp(tx, 1.5, L - 1.5); ty = clamp(ty, 1.5, W - 1.5);
     const d = dist(p.x, p.y, tx, ty);
-    const sigma = S.passSigma * clamp((100 - this.attr(p, 'pass')) / 40, 0.15, 1.6) * (p.fx?.pass ?? 1) * sigmaMul;
+    const sigma = S.passSigma * clamp((100 - this.attr(p, 'pass')) / 40, 0.15, 1.6) * (p.fx?.pass ?? 1) * sigmaMul * sigmaMul_(p.stamina);
     const ang = Math.atan2(ty - p.y, tx - p.x) + this.gauss() * sigma;
     const v0 = clamp(Math.sqrt(81 + 2 * S.ballFriction * d), 9, 30);
     const fl = this.release(p, 'pass', mate.i);
@@ -380,7 +385,7 @@ export class MatchEngine {
   /** Верхова передача / навіс у точку. */
   loft(p: SimPlayer, tx: number, ty: number, target: number, cross = false, scatterMul = 1) {
     const b = this.ball;
-    const sc = S.loftScatter * clamp((100 - this.attr(p, 'pass')) / 30, 0.3, 1.6) * (cross ? p.fx?.cross ?? 1 : p.fx?.pass ?? 1) * scatterMul;
+    const sc = S.loftScatter * clamp((100 - this.attr(p, 'pass')) / 30, 0.3, 1.6) * (cross ? p.fx?.cross ?? 1 : p.fx?.pass ?? 1) * scatterMul * sigmaMul_(p.stamina);
     tx = clamp(tx + this.gauss() * sc, 1, L - 1); ty = clamp(ty + this.gauss() * sc, 1, W - 1);
     const d = Math.max(4, dist(p.x, p.y, tx, ty));
     const T = clamp(d / S.loftSpeed, 0.7, 2.4);
@@ -418,17 +423,24 @@ export class MatchEngine {
     pSave = clamp(pSave, S.saveMin, S.saveMax);
     const ks = keeper.role === 'GK' && keeper.nat === 'GK' ? keeper.fx?.save : undefined;
     let kvia: string | undefined;
-    if (ks != null) { pSave = penalty ? Math.min(ks, S.penaltySaveSpecialCap) : ks; kvia = keeper.sp!.ability; }
+    if (ks != null) {
+      pSave = penalty ? Math.min(ks, S.penaltySaveSpecialCap) : ks;
+      pSave *= gkMul(keeper.stamina); // втомлений Буффон слабшає; Ігор не втомлюється
+      kvia = keeper.sp!.ability;
+    }
     let pGoal = 1 - pSave;
     let via: string | undefined;
     const f = p.fx;
-    if (f?.finish != null) {
-      // Оксана: у клубі користувача — гарантований гол; у суперника — 50%, а проти особливого воротаря ще менше
-      pGoal = f.finish >= 1 ? 1 : ks != null ? Math.min(f.finish, (1 - ks) * 2) : f.finish;
-      via = p.sp!.ability;
+    if (f?.finish != null && f.finish >= 1) {
+      // «Невідворотний гол» (Оксана в клубі користувача): будь-який удар у площину — гол, навіть Ігорю
+      pGoal = 1; via = p.sp!.ability;
+    } else if (ks != null && !penalty) {
+      // особливий воротар: пробити його можуть лише особливі нападники зі здібністю eliteFinish
+      if (f?.eliteFinish != null && (f.finish != null || d < 22) && f.eliteFinish > pGoal) { pGoal = f.eliteFinish; via = p.sp!.ability; }
+    } else if (f?.finish != null) {
+      pGoal = f.finish; via = p.sp!.ability;
     } else if (f?.finishDanger != null && d < 22 && !penalty) {
-      const fd = ks != null ? f.finishDanger * 0.6 : f.finishDanger;
-      if (fd > pGoal) { pGoal = fd; via = p.sp!.ability; }
+      if (f.finishDanger > pGoal) { pGoal = f.finishDanger; via = p.sp!.ability; }
     }
     return { pGoal, via, kvia };
   }
@@ -446,7 +458,8 @@ export class MatchEngine {
     const aimY = CY + side * P.goalHalf * (0.3 + 0.55 * this.rng());
     let sigma = S.shotSigmaBase + clamp((100 - this.attr(p, 'shoot')) / 100, 0, 0.8) * S.shotSigmaSkill + d * S.shotSigmaDist + pressure;
     if (o.header) sigma *= 1.5;
-    if (o.penalty) sigma = 0.02;
+    sigma *= sigmaMul_(p.stamina);
+    if (o.penalty) sigma = 0.02 * sigmaMul_(p.stamina);
     const dx = gx - p.x;
     const sdx = Math.abs(dx) < 1 ? (dx < 0 ? -1 : 1) : dx;
     let ang = Math.atan2(aimY - p.y, sdx) + this.gauss() * sigma;
@@ -458,7 +471,7 @@ export class MatchEngine {
     const inside = Math.abs(cy - CY) < P.goalHalf - 0.12;
     const post = !inside && Math.abs(cy - CY) < P.goalHalf + 0.16 && !over;
     const onTarget = inside && !over;
-    const power = (p.fx?.power ?? 1) * (o.header ? 0.6 : 1) * (0.92 + 0.16 * this.rng());
+    const power = (p.fx?.power ?? 1) * (o.header ? 0.6 : 1) * (0.92 + 0.16 * this.rng()) * powerMul(p.stamina);
     const speed = S.shotSpeed * power;
     let willSave = false;
     let via: string | undefined;
@@ -510,7 +523,7 @@ export class MatchEngine {
 
   // ---------- відбори, фоли ----------
   private tryTackle(d: SimPlayer, c: SimPlayer) {
-    d.tackleCd = S.tackleCooldown * (0.85 + 0.3 * this.rng());
+    d.tackleCd = S.tackleCooldown * (0.85 + 0.3 * this.rng()) + reactionLag(d.stamina) * 2;
     this.lastTackleT = this.time;
     const disc = this.teams[d.team].setup.discipline;
     let pf = S.foulChance * (1.5 - disc / 100) * (d.stamina < 45 ? 1.25 : 1);
@@ -551,7 +564,7 @@ export class MatchEngine {
   private duelInjury(a: SimPlayer, b: SimPlayer) {
     for (const p of [a, b]) {
       if (p.sp?.noInjury) continue;
-      const pr = S.injuryOnDuel * (p.stamina < B.fatigue.lowThreshold ? S.injuryFatigueFactor : 1);
+      const pr = S.injuryOnDuel * injuryRiskMul(p.stamina);
       if (this.rng() < pr) this.injure(p, true);
     }
   }
@@ -567,7 +580,7 @@ export class MatchEngine {
     const r = this.rng();
     const yc = S.yellowChance * (inBox ? 1.4 : 1);
     if (r < S.redChance) card = 'red'; else if (r < S.redChance + yc) card = 'yellow';
-    if (!c.sp?.noInjury && this.rng() < S.injuryOnFoul * (c.stamina < B.fatigue.lowThreshold ? S.injuryFatigueFactor : 1)) this.injure(c, false);
+    if (!c.sp?.noInjury && this.rng() < S.injuryOnFoul * injuryRiskMul(c.stamina)) this.injure(c, false);
     this.ball.owner = null; this.ball.flight = null; this.ball.vx = this.ball.vy = 0;
     const proceed = () => {
       if (inBox) {
@@ -611,6 +624,7 @@ export class MatchEngine {
 
   injure(p: SimPlayer, stopPlay: boolean) {
     if (!p.on || p.injury > 0 || p.sp?.noInjury) return;
+    if (this.stats[p.team].injuries >= B.fatigue.maxInjuriesPerTeam) return; // захист від серії травм
     const t = this.teams[p.team];
     const u = this.rng();
     p.injury = B.injuries.minMatches + Math.floor(u * u * (B.injuries.maxMatches - B.injuries.minMatches + 1));
@@ -868,12 +882,18 @@ export class MatchEngine {
     this.ref.y += (ry - this.ref.y) * Math.min(1, dt * 1.6);
   }
 
+  /** Витрата сил: частина — за час на полі, частина — за пробіг і ривки. Плюс ризик травми у спринті при сильній втомі. */
   private updateStamina() {
     const total = 2 * B.match.halfSeconds;
+    const FT = B.fatigue;
     for (const p of this.players) {
       if (!p.on) continue;
       p.timeOn += B.match.dt * 20;
-      p.stamina = Math.max(0, p.stamina0 - (p.drain * p.timeOn) / total);
+      const run = (p.dist + (FT.sprintDrainMul - 1) * p.sprintDist) / FT.expectedDist;
+      const used = p.drain * (FT.drainTimeShare * DRAIN_ROLE[p.role] * (p.timeOn / total) + FT.drainDistShare * run);
+      p.stamina = Math.max(0, p.stamina0 - used);
+      if (p.sprint && p.stamina < FT.lowThreshold && !p.sp?.noInjury && this.phase === 'play' && Math.hypot(p.vx, p.vy) > 5 &&
+        this.rng() < FT.sprintInjury * injuryRiskMul(p.stamina)) this.injure(p, true);
     }
   }
 
@@ -908,10 +928,12 @@ export class MatchEngine {
         dvx = (dx / d) * sp; dvy = (dy / d) * sp;
       }
       const ax = dvx - p.vx, ay = dvy - p.vy;
-      const al = Math.hypot(ax, ay), am = S.accel * dt;
+      const al = Math.hypot(ax, ay), am = S.accel * accelMul(p.stamina) * dt;
       if (al > am) { p.vx += (ax / al) * am; p.vy += (ay / al) * am; } else { p.vx = dvx; p.vy = dvy; }
       p.x += p.vx * dt; p.y += p.vy * dt;
       const v = Math.hypot(p.vx, p.vy);
+      p.dist += v * dt;
+      if (v > max * 0.85 && (p.sprint || f)) p.sprintDist += v * dt;
       if (v > 1.2) { p.hx += (p.vx / v - p.hx) * 0.25; p.hy += (p.vy / v - p.hy) * 0.25; }
       p.x = clamp(p.x, -2, L + 2); p.y = clamp(p.y, -2, W + 2);
     }
@@ -1011,6 +1033,7 @@ export class MatchEngine {
           let pb = S.blockBase * (this.attr(p, 'tackle') / 75);
           let via: string | null = null;
           if (p.fx?.block != null) { pb = p.fx.block; via = p.sp!.ability; }
+          pb = (pb + (p.boost.block ?? 0) * 0.012) * attrMul(p.stamina);
           const shooter = this.players[sh.shooter];
           if (shooter.fx?.finish != null && shooter.fx.finish >= 1) pb *= 0.6;
           if (this.rng() < pb) {
@@ -1034,13 +1057,22 @@ export class MatchEngine {
           if (fl.tried.has(p.i)) continue;
           fl.tried.add(p.i);
           const v = Math.hypot(b.vx, b.vy);
-          const pi = S.interceptBase * (this.attr(p, 'tackle') / 75) * (p.fx?.intercept ?? 1) * (1 - clamp((v - 10) / 32, 0, 0.6)) * (p.role === 'GK' ? 1.4 : 1);
+          const pi = S.interceptBase * (this.attr(p, 'tackle') / 75) * (p.fx?.intercept ?? 1) * (1 + (p.boost.intercept ?? 0) * 0.025) * (1 - clamp((v - 10) / 32, 0, 0.6)) * (p.role === 'GK' ? 1.4 : 1);
           if (this.rng() >= pi) continue;
           if (p.fx?.intercept && p.sp) this.ability(p.sp.ability);
           p.pts += 0.25;
         }
       }
       if (d < bd) { bd = d; best = p; }
+    }
+    if (best && fl && (fl.kind === 'pass' || fl.kind === 'loft' || fl.kind === 'loose') && best.role !== 'GK' && this.rng() < miscontrolChance(best.stamina)) {
+      // втомлений гравець погано приймає мʼяч — той відскакує
+      const a = Math.atan2(b.vy, b.vx) + (this.rng() - 0.5) * 2.2;
+      const v = 3 + this.rng() * 5;
+      b.vx = Math.cos(a) * v; b.vy = Math.sin(a) * v; b.z = 0; b.vz = 0;
+      b.lastTouch = best.i; b.lastTeam = best.team;
+      fl.kind = 'loose'; fl.by = best.i; fl.team = best.team; fl.t = 0; fl.shot = undefined;
+      return;
     }
     if (best) this.control(best);
   }

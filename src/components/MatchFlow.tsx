@@ -9,6 +9,7 @@ import { audio } from '../game/audio';
 import { eventLine, type Line } from '../game/commentary';
 import { PitchRenderer } from '../game/renderer';
 import { clubName, matchesWord, playerName } from '../game/selectors';
+import { MSG, genderOf, person, w } from '../data/i18n';
 import { act, commit, getState, go, toast, useApp } from '../game/store';
 import { MatchEngine } from '../simulation/engine';
 import { hashSeed } from '../simulation/rng';
@@ -97,7 +98,7 @@ export function MatchScreen() {
   const boxRef = useRef<HTMLDivElement>(null);
   const rendRef = useRef<PitchRenderer | null>(null);
   const paused = useRef(false);
-  const speed = useRef(settings.speed || 1);
+  const speed = useRef(2); // за замовчуванням ×2, можна ×1 або ×4
   const [, force] = useState(0);
   const [lines, setLines] = useState<{ min: string; line: Line }[]>([]);
   const [banner, setBanner] = useState<{ line: Line; key: number } | null>(null);
@@ -218,12 +219,12 @@ export function MatchScreen() {
   return (
     <div className="match">
       <div className="mboard">
-        <div className="tm" style={{ '--tc': colors[0] } as CSSProperties}><Logo club={fx.home} size={38} /><span className="ell">{names[0]}</span>{userTeam === 0 && <span className="you">ВИ</span>}</div>
+        <div className="tm" style={{ '--tc': colors[0] } as CSSProperties}><Logo club={fx.home} size={38} /><span className="ell nm-full">{names[0]}</span><span className="nm-abbr">{CLUB_BY_ID[fx.home].abbr}</span>{userTeam === 0 && <span className="you">ВИ</span>}</div>
         <div className="mid">
           <div className="score" aria-label={`Рахунок ${engine.score[0]}:${engine.score[1]}`}><b key={`h${engine.score[0]}`} className={engine.score[0] ? 'bump' : ''}>{engine.score[0]}</b><i>:</i><b key={`a${engine.score[1]}`} className={engine.score[1] ? 'bump' : ''}>{engine.score[1]}</b></div>
           <div className="clock">{engine.minLabel()}' · {halfLabel}</div>
         </div>
-        <div className="tm r" style={{ '--tc': colors[1] } as CSSProperties}>{userTeam === 1 && <span className="you">ВИ</span>}<span className="ell">{names[1]}</span><Logo club={fx.away} size={38} /></div>
+        <div className="tm r" style={{ '--tc': colors[1] } as CSSProperties}>{userTeam === 1 && <span className="you">ВИ</span>}<span className="ell nm-full">{names[1]}</span><span className="nm-abbr">{CLUB_BY_ID[fx.away].abbr}</span><Logo club={fx.away} size={38} /></div>
       </div>
       <div className="mcanvas" ref={boxRef}>
         <canvas ref={canvasRef} />
@@ -239,7 +240,7 @@ export function MatchScreen() {
         {engine.phase === 'half' && !panel && (
           <div className="mpanel"><div className="box">
             <h2 className="center">Перерва</h2>
-            <div className="plates" style={{ margin: '8px auto 10px' }}><b>{engine.score[0]}</b><i>:</i><b>{engine.score[1]}</b></div>
+            <div className="plates center-plates"><b>{engine.score[0]}</b><i>:</i><b>{engine.score[1]}</b></div>
             <StatBlock st={liveStats(engine)} c1={colors[0]} c2={colors[1]} />
             <div className="row wrap" style={{ justifyContent: 'center', marginTop: 12 }}><Btn onClick={() => setPanel('subs')}>Заміни ({subsLeft})</Btn><Btn onClick={() => setPanel('tactics')}>Тактика</Btn><Btn kind="primary" onClick={() => { engine.startSecondHalf(); force((x) => x + 1); }}>Другий тайм</Btn></div>
           </div></div>
@@ -322,7 +323,7 @@ export function PostMatch() {
       const it = unitItems(c.unitId);
       return <Showcase rarity={it.rarity} isUser head={it.head} sub={c.from ? `Сюжетний перехід! ${unitName(c.unitId)} залишає «${clubName(c.from)}» і приєднується до вас.` : c.unitId === 'oksana' ? 'Вихованка клубу повертається додому — тепер вона грає за вас.' : it.sub} items={it.items} onSkip={() => undefined}
         footerNote="У вашому клубі здібності діють на повну силу."
-        actions={<><Btn kind="primary" onClick={() => { if (act((st) => claimCard(st, true), 'Гравця додано до стартового складу!')) setReveal(false); }}>Одразу в основу</Btn><Btn onClick={() => { if (act((st) => claimCard(st, false), 'Гравця додано до заявки (резерв)')) setReveal(false); }}>Додати до команди (резерв)</Btn></>} />;
+        actions={<><Btn kind="primary" onClick={() => { if (act((st) => claimCard(st, true), c.unitId === 'trio' || c.unitId === 'duo' ? 'Комплект додано до стартового складу!' : `${unitName(c.unitId)} — у стартовому складі!`)) setReveal(false); }}>Одразу в основу</Btn><Btn onClick={() => { if (act((st) => claimCard(st, false), c.unitId === 'trio' || c.unitId === 'duo' ? 'Комплект додано до заявки (резерв)' : `${unitName(c.unitId)} — у заявці (резерв)`)) setReveal(false); }}>Додати до команди (резерв)</Btn></>} />;
     }
     return <Showcase rarity={c.kind === 'jackpot' ? 'divine' : 'rare'} isUser head={c.kind === 'jackpot' ? 'ФІНАНСОВИЙ ДЖЕКПОТ ІМІ' : 'ТРАНСФЕРНА ПОДІЯ'} sub={c.kind === 'jackpot' ? 'Трансферний бюджет погоджено!' : 'Цього разу без нового гравця — зате партнери клубу поповнили бюджет.'}
       items={[c.kind === 'jackpot' ? { jackpot: c.amount } : { sponsor: c.amount }]} onSkip={() => undefined}
@@ -339,7 +340,7 @@ export function PostMatch() {
           <div className="plates"><b>{m.score[0]}</b><i>:</i><b>{m.score[1]}</b></div>
           <div className="side"><Logo club={m.away} size={64} /><b>{clubName(m.away)}</b></div>
         </div>
-        {m.motm && <p style={{ marginTop: 12 }}>⭐ Герой матчу: <b>{m.motm.name}</b> <span className="muted">({clubName(m.motm.team === 0 ? m.home : m.away)})</span></p>}
+        {m.motm && <p style={{ marginTop: 12 }}>⭐ {w('hero', genderOf(m.motm.special))}: <b>{m.motm.name}</b> <span className="muted">({clubName(m.motm.team === 0 ? m.home : m.away)})</span></p>}
         <div style={{ marginTop: 6 }}><Btn kind="small blue" onClick={() => setDetails(true)}>Статистика матчу</Btn></div>
       </div>
       <div className="panel">
@@ -349,9 +350,9 @@ export function PostMatch() {
       {(post.newInjuries.length > 0 || post.newBans.length > 0) && (
         <div className="panel"><h3>Лазарет і дискваліфікації</h3><div className="news">
           {post.newInjuries.map((inj) => { const p = club.players.find((x) => x.id === inj.pid); const healed = !p || p.injured <= 0; return (
-            <div key={inj.pid} style={{ '--nc': 'var(--red)' } as CSSProperties} className="row wrap"><span className="grow">{healed ? <><b>{inj.name}</b> — вилікувано, готовий до наступного матчу ✔</> : <><b>{inj.name}</b> пропустить {matchesWord(p!.injured)}.</>}</span>
-              {!healed && p && <Btn kind="small green" sound="coin" disabled={s.coins < treatCost(p)} onClick={() => act((st) => treatPlayer(st, p.id), `${playerName(p)} повернеться вже в наступному матчі!`)}>Вартість лікування: {treatCost(p).toLocaleString('uk-UA')} MC</Btn>}</div>); })}
-          {post.newBans.map((b, i) => <div key={i} style={{ '--nc': '#ffd43b' } as CSSProperties}><b>{b.name}</b> дискваліфікований на {matchesWord(b.matches)} — {b.reason}.</div>)}
+            <div key={inj.pid} style={{ '--nc': 'var(--red)' } as CSSProperties} className="row wrap"><span className="grow">{healed ? <>{MSG.healedNow(person(inj.name, inj.special))} ✔</> : <><b>{inj.name}</b> пропустить {matchesWord(p!.injured)}.</>}</span>
+              {!healed && p && <Btn kind="small green" sound="coin" disabled={s.coins < treatCost(p)} onClick={() => act((st) => treatPlayer(st, p.id), `${playerName(p)}: лікування завершено — до наступного матчу в строю!`)}>Вартість лікування: {treatCost(p).toLocaleString('uk-UA')} MC</Btn>}</div>); })}
+          {post.newBans.map((b, i) => <div key={i} style={{ '--nc': '#ffd43b' } as CSSProperties}>{MSG.banned(person(b.name, b.special), matchesWord(b.matches), b.reason)}</div>)}
         </div></div>
       )}
       <div className="panel"><h3>Інші матчі туру</h3><div className="fx2">{post.others.map((o, i) => <FixtureRow key={i} home={o.home} away={o.away} score={o.score} me={s.userClub} />)}</div></div>

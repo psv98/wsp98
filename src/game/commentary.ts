@@ -1,4 +1,5 @@
-// Тексти коментаря до подій матчу (українською).
+// Тексти коментаря до подій матчу (українською, з урахуванням граматичного роду).
+import { MSG, person } from '../data/i18n';
 import type { MatchEvent } from '../simulation/types';
 
 export interface Line { text: string; tone: 'goal' | 'warn' | 'info' | 'special' | 'bad'; big?: boolean }
@@ -8,6 +9,7 @@ const VAR_KIND: Record<string, string> = { goal: 'гол', penalty: 'пенал�
 export function eventLine(e: MatchEvent, clubs: [string, string]): Line | null {
   const club = e.team >= 0 ? clubs[e.team as 0 | 1] : '';
   const who = e.name ?? 'Гравець';
+  const p = person(who, e.special);
   switch (e.type) {
     case 'kickoff': return null;
     case 'goal': return { text: `ГОЛ! ${who}. ${club}${e.text === 'pen' ? ' · з пенальті' : e.text === 'head' ? ' · головою' : ''}${e.name2 ? ` · асист: ${e.name2}` : ''}`, tone: 'goal', big: true };
@@ -17,10 +19,10 @@ export function eventLine(e: MatchEvent, clubs: [string, string]): Line | null {
     case 'post': return { text: `Каркас воріт! ${who} влучає у стійку`, tone: 'warn' };
     case 'block': return { text: `${who} блокує удар`, tone: 'info' };
     case 'foul': return { text: `Фол: ${who} (${club})`, tone: 'info' };
-    case 'yellow': return { text: `Жовта картка: ${who} (${club})`, tone: 'warn', big: true };
-    case 'secondYellow': return { text: `Друга жовта! ${who} вилучений — «${club}» у меншості`, tone: 'bad', big: true };
-    case 'red': return { text: `Червона картка! ${who} вилучений — «${club}» у меншості`, tone: 'bad', big: true };
-    case 'injury': return { text: e.special ? `Травма зірки! ${who} не може продовжити матч` : `${who} зазнав травми!`, tone: 'bad', big: true };
+    case 'yellow': return { text: MSG.yellow(p, club), tone: 'warn', big: true };
+    case 'secondYellow': return { text: MSG.secondYellow(p, club), tone: 'bad', big: true };
+    case 'red': return { text: MSG.red(p, club), tone: 'bad', big: true };
+    case 'injury': return { text: e.special ? MSG.starInjured(p) : MSG.injured(p), tone: 'bad', big: true };
     case 'sub': return { text: `Заміна (${club}): ${who} ⟶ ${e.name2}`, tone: 'info' };
     case 'corner': return { text: `Кутовий — «${club}»`, tone: 'info' };
     case 'penalty': return { text: `ПЕНАЛЬТІ на користь «${club}»!`, tone: 'warn', big: true };
@@ -30,7 +32,7 @@ export function eventLine(e: MatchEvent, clubs: [string, string]): Line | null {
     case 'golden': return { text: `«Золота хвилина»! «${club}» йде у навалу`, tone: 'special', big: true };
     case 'lastAttack': return { text: `«Остання атака»! «${club}» має шанс`, tone: 'special', big: true };
     case 'storm': return { text: `«Повітряний штурм Ісиченка»! Воротар біжить на кутовий!`, tone: 'special', big: true };
-    case 'stormFail': return { text: `${who} не встиг до штрафного майданчика`, tone: 'info' };
+    case 'stormFail': return { text: MSG.stormFail(p), tone: 'info' };
     case 'varOffer': return null;
     case 'var': return { text: `«Юридичний VAR»: арбітр переглядає епізод (${VAR_KIND[e.text ?? ''] ?? 'епізод'})`, tone: 'special', big: true };
     case 'varOverturn': return { text: e.text === 'goal' ? 'VAR: гол скасовано!' : e.text === 'penalty' ? 'VAR: пенальті скасовано!' : 'VAR: замість вилучення — жовта картка', tone: 'special', big: true };

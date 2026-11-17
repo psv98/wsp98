@@ -4,11 +4,14 @@ import { BALANCE as B } from '../data/balance';
 import { CLUBS, CLUB_BY_ID } from '../data/clubs';
 import { audio } from '../game/audio';
 import { clubName, fmtTime, lastResult, matchesWord, nextMatch, playerName, tableOf } from '../game/selectors';
-import { downloadSave, go, importFromFile, resetProgress, restoreBackup, resumeScreen, startNewGame, updateSettings, useApp } from '../game/store';
+import { act, downloadSave, go, importFromFile, resetProgress, restoreBackup, resumeScreen, startNewGame, updateSettings, useApp } from '../game/store';
 import { ROUNDS } from '../systems/season';
-import { isAvailable, teamCondition } from '../systems/squad';
+import { fatigueWarning, isAvailable, restoreAllCost, teamCondition } from '../systems/squad';
+import { restoreStamina } from '../systems/actions';
 import { marketOpen } from '../systems/transfers';
 import type { MatchSummary, SaveState, TableRow, UserMatchRecord } from '../systems/types';
+import { MSG, person } from '../data/i18n';
+import { fatigueColor } from '../simulation/fatigue';
 import { ChampionshipBadge, SupercupIcon, SupercupLogo } from './supercup';
 import { Btn, Coins, Icon, Logo, Modal, TopBar } from './ui';
 
@@ -107,6 +110,7 @@ export function Hub() {
   const inj = club.players.filter((p) => p.injured > 0).length, ban = club.players.filter((p) => p.suspended > 0).length;
   const pityLeft = B.transfers.pityMatches - s.transfers.pity;
   const champ = s.history[s.history.length - 1]?.champion;
+  const [warn, setWarn] = useState(false);
   const tiles: [string, string, Parameters<typeof go>[0], boolean?][] = [
     ['Мій склад', `${club.formation} · стан ${teamCondition(club)}%`, 'squad', inj + ban > 0],
     ['Турнірна таблиця', `${pos} місце · ${row.pts} очок`, 'table'],
@@ -114,7 +118,7 @@ export function Hub() {
     ['Результати матчів', s.round ? `Зіграно турів: ${s.round}` : 'Ще немає матчів', 'results'],
     ['Трансфери', marketOpen(s) ? 'Ринок зірок ВІДКРИТО!' : `Мегатрансферів: ${club.megaTransfers.length}`, 'transfers', marketOpen(s)],
     ['Медіакоїни', `${s.coins.toLocaleString('uk-UA')} MC`, 'coins'],
-    ['Статистика', 'Матчі, бомбардири, гравці', 'stats'],
+    ['Статистика', 'Матчі, бомбардири й бомбардирки', 'stats'],
     ['Історія сезонів', s.history.length ? `Завершено сезонів: ${s.history.length}` : 'Перший сезон', 'history'],
     ['Налаштування', 'Звук, графіка, збереження', 'settings'],
   ];
@@ -147,10 +151,17 @@ export function Hub() {
             <div className="side"><Logo club={nm.fx.away} size={58} /><b>{clubName(nm.fx.away)}</b><small className="muted">гості</small></div>
           </div>
           {s.clubs[nm.opp].megaTransfers.length > 0 && <p className="center" style={{ marginTop: 8 }}><span className="chip gold">⚠ У суперника є мегатрансфери: {s.clubs[nm.opp].megaTransfers.length}</span></p>}
-          <div className="center" style={{ marginTop: 14 }}><Btn kind="primary big" onClick={() => go('prematch')}>ГРАТИ МАТЧ</Btn></div>
+          <div className="center" style={{ marginTop: 14 }}><Btn kind="primary big" onClick={() => (fatigueWarning(s) ? setWarn(true) : go('prematch'))}>ГРАТИ МАТЧ</Btn></div>
         </div>
       )}
-      {!nm && <div className="panel center"><p>Сезон завершено.</p><div style={{ marginTop: 10 }}><Btn kind="primary" onClick={() => go('ceremony')}>До церемонії нагородження</Btn></div></div>}
+      {!nm && (
+        <div className="panel hero center">
+          <h3>Сезон {s.season} завершено</h3>
+          <h2>Міжсезоння</h2>
+          <p className="muted" style={{ margin: '6px auto 14px', maxWidth: 560 }}>Розвивайте футболістів, торгуйтеся на трансферному ринку й відповідайте на пропозиції клубів. Потім — новий сезон.</p>
+          <div className="row wrap" style={{ justifyContent: 'center', gap: 6 }}><Btn kind="primary big" onClick={() => go('offseason')}>Відкрити міжсезоння</Btn><Btn kind="blue" onClick={() => go('ceremony')}>Церемонія</Btn></div>
+        </div>
+      )}
       <div className="menu-grid">
         {tiles.map(([t, sub, scr, dot]) => (
           <button type="button" key={t} className="tile" onClick={() => { audio.sfx('click'); go(scr); }}>
@@ -158,7 +169,33 @@ export function Hub() {
           </button>
         ))}
       </div>
+      {warn && <FatigueWarning onClose={() => setWarn(false)} />}
     </div>
+  );
+}
+
+/** Попередження перед матчем, якщо основний склад утомлений. Користувач може грати попри ризик. */
+export function FatigueWarning({ onClose }: { onClose: () => void }) {
+  const { save } = useApp();
+  const s = save!;
+  const w = fatigueWarning(s);
+  const cost = restoreAllCost(s.clubs[s.userClub]);
+  if (!w) { return <Modal onClose={onClose}><h2 className="good">Склад готовий до гри</h2><p>Усі основні гравці мають достатньо сил.</p><div className="actions"><Btn kind="primary" onClick={() => { onClose(); go('prematch'); }}>До матчу</Btn></div></Modal>; }
+  const crit = w.level === 'critical';
+  return (
+    <Modal onClose={onClose}>
+      <div className={`fat-warn ${crit ? 'crit' : ''}`}>
+        <div className="fat-icon" aria-hidden="true">{crit ? '⚠' : '!'}</div>
+        <h2>{crit ? 'Критична втома! Високий ризик травм' : 'Увага! Ваші футболісти втомилися'}</h2>
+        <p>{crit ? 'У вашому складі є виснажені футболісти. Вони можуть отримати травми та пропустити наступні матчі.' : 'Деякі футболісти втратили значну частину витривалості. Це негативно вплине на швидкість, передачі, удари та захисні дії.'}</p>
+        <div className="fat-list">{w.players.map((p) => <div key={p.id}><span className="grow ell">{p.name}</span><span className={`stam-chip c-${fatigueColor(p.stamina)}`}>{p.stamina}%</span></div>)}</div>
+        <div className="actions">
+          <Btn kind="blue" onClick={() => { onClose(); go('squad'); }}>Перейти до складу</Btn>
+          <Btn kind="green" sound="coin" disabled={cost <= 0 || s.coins < cost} onClick={() => { if (act((st) => restoreStamina(st, 'all'), 'Команда відновила сили!')) { onClose(); } }}>Відновити витривалість · {cost.toLocaleString('uk-UA')} MC</Btn>
+          <Btn kind={crit ? 'danger' : 'silver'} onClick={() => { onClose(); go('prematch'); }}>Грати попри ризик</Btn>
+        </div>
+      </div>
+    </Modal>
   );
 }
 
@@ -282,7 +319,7 @@ export function MatchDetails({ m, me }: { m: UserMatchRecord; me: string }) {
       <div style={{ '--c1': c1, '--c2': c2 } as CSSProperties}>
         {L.map(([label, k]) => { const a = m.stats[0][k] as number, b = m.stats[1][k] as number; const t = a + b || 1; return (<div className="statline" key={k}><b>{a}</b><div><div className="lbl">{label}</div><div className="bar"><i style={{ width: `${a + b === 0 ? 50 : (a / t) * 100}%` }} /><u /></div></div><b>{b}</b></div>); })}
       </div>
-      {m.motm && <p>⭐ <b>{m.motm.name}</b> — {/(а|я)$/.test(m.motm.name.split(' ')[0]) && m.motm.special ? 'найкраща гравчиня матчу' : 'найкращий гравець матчу'} ({clubName(m.motm.team === 0 ? m.home : m.away)})</p>}
+      {m.motm && <p>⭐ <b>{MSG.bestOfMatch(person(m.motm.name, m.motm.special))}</b> ({clubName(m.motm.team === 0 ? m.home : m.away)})</p>}
       {m.topSaves && m.topSaves.saves > 0 && <p className="muted">🧤 {m.topSaves.name} — сейвів: {m.topSaves.saves}</p>}
       {ab.length > 0 && <div className="row wrap">{ab.map(([k, v]) => <span className="chip gold" key={k}>{k} ×{v}</span>)}</div>}
       {m.cards.length > 0 && <div className="row wrap">{m.cards.map((c, i) => <span key={i} className={`chip ${c.kind === 'red' ? 'red' : ''}`}>{c.kind === 'red' ? '🟥' : '🟨'} {c.name}</span>)}</div>}
@@ -307,7 +344,7 @@ export function Stats() {
     <>
       <TopBar title="Статистика" />
       <div className="page grid">
-        <div className="tabs">{['Мої матчі', 'Бомбардири ліги', 'Гравці клубу', 'Події сезону'].map((t, i) => <button type="button" key={t} className={tab === i ? 'on' : ''} onClick={() => setTab(i)}>{t}</button>)}</div>
+        <div className="tabs">{['Мої матчі', 'Бомбардири й бомбардирки', 'Гравці клубу', 'Події сезону'].map((t, i) => <button type="button" key={t} className={tab === i ? 'on' : ''} onClick={() => setTab(i)}>{t}</button>)}</div>
         {tab === 0 && <div className="panel">{s.userMatches.length === 0 && <p className="muted center">Архів сезону порожній — зіграйте перший матч.</p>}
           {s.userMatches.slice().reverse().map((m) => <button type="button" key={m.round} style={{ display: 'block', width: '100%' }} onClick={() => setOpen(m)}><div className="muted" style={{ fontSize: 11, textAlign: 'left', marginTop: 6 }}>Тур {m.round + 1} · натисніть для деталей</div><FixtureRow home={m.home} away={m.away} score={m.score} me="" /></button>)}</div>}
         {tab === 1 && <div className="panel tblwrap"><table className="tbl"><thead><tr><th>#</th><th className="name">Гравець</th><th className="name">Клуб</th><th>Голи</th><th>Асисти</th></tr></thead><tbody>{scorers.map((x, i) => <tr key={i} className={x.club === s.userClub ? 'me' : ''}><td>{i + 1}</td><td className="name">{x.name}</td><td className="name"><span className="row" style={{ gap: 6 }}><Logo club={x.club} size={20} /><span className="ell">{clubName(x.club)}</span></span></td><td className="pts">{x.goals}</td><td>{x.assists}</td></tr>)}</tbody></table>{scorers.length === 0 && <p className="muted center">Голів ще не забито.</p>}</div>}

@@ -1,7 +1,7 @@
 import type { FormationId, Role } from '../data/formations';
-import type { GoalInfo, TeamStats } from '../simulation/types';
+import type { BoostKey, GoalInfo, TeamStats } from '../simulation/types';
 
-export const SAVE_VERSION = 1;
+export const SAVE_VERSION = 2;
 
 export interface PlayerSeasonStats { apps: number; goals: number; assists: number; yc: number; rc: number; saves: number; motm: number }
 
@@ -16,6 +16,16 @@ export interface PlayerState {
   yellows: number;
   special?: string;
   s: PlayerSeasonStats;
+  dev?: PlayerDev;
+}
+
+/** Розвиток гравця між сезонами. */
+export interface PlayerDev {
+  gained: number; // сумарна прибавка до рейтингу
+  season: number; // сезон останнього міжсезоння, у якому було покращення
+  count: number; // скільки пунктів куплено в цьому міжсезонні (максимум 2)
+  focus: Partial<Record<BoostKey, number>>; // бонуси обраних напрямів
+  log: { season: number; from: number; to: number; focus: string }[];
 }
 
 export interface ClubState {
@@ -25,7 +35,11 @@ export interface ClubState {
   players: PlayerState[]; // 24
   lineup: string[]; // 11 id у порядку слотів схеми
   megaTransfers: string[];
+  coins: number; // бюджет клубу (для клубу користувача не використовується — див. SaveState.coins)
+  finance: ClubFinance;
 }
+
+export interface ClubFinance { season: number; income: number; spend: number; log: CoinEntry[] }
 
 export interface Fixture { home: string; away: string }
 
@@ -53,7 +67,7 @@ export type CardDrop =
   | { kind: 'jackpot'; amount: number }
   | { kind: 'sponsor'; amount: number };
 
-export interface TransferLogEntry { season: number; round: number; club: string; unitId: string; from?: string; kind: 'mega' | 'star' | 'steal' }
+export interface TransferLogEntry { season: number; round: number; club: string; unitId: string; from?: string; kind: 'mega' | 'star' | 'steal' | 'market'; price?: number }
 
 export interface PostMatch {
   round: number;
@@ -62,8 +76,8 @@ export interface PostMatch {
   rewards: CoinEntry[];
   card: CardDrop | null;
   cardClaimed: boolean;
-  newInjuries: { pid: string; name: string; matches: number }[];
-  newBans: { name: string; matches: number; reason: string }[];
+  newInjuries: { pid: string; name: string; matches: number; special?: string }[];
+  newBans: { name: string; matches: number; reason: string; special?: string }[];
   aiTransfers: TransferLogEntry[];
   sensation: MatchSummary[]; // «Сенсація туру»
   seasonFinished: boolean;
@@ -82,6 +96,7 @@ export interface SeasonRecord {
   achievements: string[];
   userResults: { round: number; opp: string; home: boolean; score: [number, number] }[];
   coinsEarned: number;
+  offseason?: { bought: string[]; sold: string[]; news: string[]; ratingChanges: { id: string; name: string; from: number; to: number }[]; spent: number; income: number };
 }
 
 export interface TransferState {
@@ -114,7 +129,51 @@ export interface SaveState {
   userMatches: UserMatchRecord[];
   history: SeasonRecord[];
   events: { season: number; round: number; text: string }[];
+  offseason: OffseasonState | null;
+}
+
+export type DealStatus = 'open' | 'countered' | 'outbid' | 'won' | 'lost' | 'rejected' | 'withdrawn';
+/** Переговори користувача про купівлю (з конкурентами — це аукціон). */
+export interface Deal {
+  id: string;
+  specialId: string;
+  seller: string | null; // null — вільний агент (світова зірка без клубу)
+  value: number; // ринкова вартість на момент старту
+  ask: number; // прихована ціна продавця
+  round: number; // поточний раунд торгів (1..maxRounds)
+  userBid: number;
+  rivals: { club: string; bid: number; max: number }[];
+  counter?: number;
+  status: DealStatus;
+  message: string;
+  winner?: string;
+  price?: number;
+}
+/** Пропозиція іншого клубу за гравця користувача. */
+export interface IncomingOffer {
+  id: string;
+  specialId: string;
+  buyer: string;
+  amount: number;
+  max: number; // прихована межа покупця
+  status: 'pending' | 'accepted' | 'rejected' | 'countered' | 'declined';
+  countered?: number;
+  message?: string;
+}
+export interface OffseasonState {
+  season: number;
+  startCoins: number;
+  deals: Deal[];
+  incoming: IncomingOffer[];
+  news: string[];
+  bought: string[];
+  sold: string[];
+  ratingChanges: { id: string; name: string; from: number; to: number }[];
+  devSpent: number;
+  transferSpent: number;
+  transferIncome: number;
+  nonce: number;
 }
 
 export interface Settings { music: number; sfx: number; crowd: number; muted: boolean; lowGfx: boolean; speed: number }
-export const DEFAULT_SETTINGS: Settings = { music: 0.5, sfx: 0.8, crowd: 0.6, muted: false, lowGfx: false, speed: 1 };
+export const DEFAULT_SETTINGS: Settings = { music: 0.5, sfx: 0.8, crowd: 0.6, muted: false, lowGfx: false, speed: 2 };

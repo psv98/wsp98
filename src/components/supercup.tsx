@@ -75,7 +75,6 @@ export function WinnerScreen({ winnerClub, season, points, isUser, actions }: { 
   useEffect(() => { audio.music('ceremony'); return () => audio.music(null); }, []);
   return (
     <div className="victory">
-      <div className="v-confetti" aria-hidden="true" />
       <GoldConfetti count={isUser ? 80 : 30} />
       <div className="victory-in">
         <h1 className="v-title">{isUser ? 'ВИ — ЧЕМПІОНИ!' : 'ЧЕМПІОН СЕЗОНУ'}</h1>

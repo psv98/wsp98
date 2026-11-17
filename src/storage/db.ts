@@ -1,5 +1,6 @@
 // Сховище прогресу: IndexedDB (основне) з резервом у localStorage. Версіонування, контрольна сума, резервні копії.
-import { CLUBS } from '../data/clubs';
+import { CLUBS, LEGACY_NAMES } from '../data/clubs';
+import { clubStartCoins } from '../systems/squad';
 import { SAVE_VERSION, type SaveState, type Settings, DEFAULT_SETTINGS } from '../systems/types';
 
 const DB_NAME = 'bilyi-superkubok';
@@ -31,12 +32,40 @@ export function validateSave(d: unknown): string | null {
   if (!Number.isFinite(s.coins) || s.coins < 0) return 'Некоректний баланс медіакоїнів';
   if (!Number.isInteger(s.season) || s.season < 1) return 'Некоректний номер сезону';
   if (!s.transfers || typeof s.transfers.owners !== 'object' || !Array.isArray(s.history) || !Array.isArray(s.coinLog)) return 'Пошкоджені дані трансферів або історії';
+  if (s.version >= 2 && CLUBS.some((c) => !Number.isFinite(s.clubs[c.id].coins) || s.clubs[c.id].coins < 0)) return 'Некоректний бюджет клубу';
+  // унікальність персонажів: кожен належить не більше ніж одному клубу
+  const seen = new Set<string>();
+  for (const c of CLUBS) for (const p of s.clubs[c.id].players) if (p.special) { if (seen.has(p.special)) return `Дублікат персонажа ${p.special}`; seen.add(p.special); }
   return null;
 }
 
-/** Міграції схеми збережень (для майбутніх версій). */
+/** Перейменування старих назв клубів у збережених текстах (ідентифікатори клубів не змінювались). */
+export function renameLegacy(text: string): string {
+  let t = text;
+  for (const [old, now] of Object.entries(LEGACY_NAMES)) t = t.split(old).join(now);
+  return t;
+}
+
+/**
+ * Міграції схеми збережень. Ідемпотентні: повторне застосування нічого не змінює й не створює дублікатів.
+ * v1 → v2: бюджети й фінанси клубів-суперників, поле міжсезоння, нові назви шести клубів у текстах подій.
+ */
 export function migrate(d: SaveState): SaveState {
-  // v1 — поточна версія. Нові міграції додаються сюди: if (d.version === 1) { ...; d.version = 2; }
+  if (!d || typeof d !== 'object') return d;
+  if (d.version === 1) {
+    for (const def of CLUBS) {
+      const c = d.clubs?.[def.id];
+      if (!c) continue;
+      if (typeof c.coins !== 'number') c.coins = clubStartCoins(def);
+      if (!c.finance) c.finance = { season: d.season, income: 0, spend: 0, log: [] };
+    }
+    if (d.offseason === undefined) d.offseason = null;
+    d.version = 2;
+  }
+  // назви в текстах подій та новинах (безпечно застосовувати повторно)
+  if (Array.isArray(d.events)) for (const e of d.events) e.text = renameLegacy(e.text);
+  if (d.offseason?.news) d.offseason.news = d.offseason.news.map(renameLegacy);
+  for (const h of d.history ?? []) if (h.offseason?.news) h.offseason.news = h.offseason.news.map(renameLegacy);
   return d;
 }
 

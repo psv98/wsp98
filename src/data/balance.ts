@@ -40,9 +40,29 @@ export const BALANCE = {
   },
 
   fatigue: {
-    recoverPlayed: 9, recoverRested: 30, // відновлення між турами
-    restoreCostPerPoint: 3, // MC за 1% витривалості одного гравця
-    lowThreshold: 55,
+    recoverPlayed: 9, recoverRested: 30, // відновлення між турами (зіграв / не виходив)
+    // Втома: fat = (1 − st/100)^curveExp ∈ [0, 1] — плавно, без стрибків на межах станів.
+    // Кожен канал втрачає частку loss·fat: 60% → ≈13% від максимальної втрати, 40% → ≈33%, 20% → ≈61%, 0% → уся.
+    curveExp: 2.2,
+    speedLoss: 0.17, // максимальна (при 0%) втрата швидкості
+    accelLoss: 0.25, // прискорення та ривки
+    attrLoss: 0.13, // удари, передачі, відбори, дриблінг, гра головою
+    gkLoss: 0.25, // надійність воротаря (крім тих, хто не втомлюється)
+    sigmaGain: 0.6, // зростання розкиду ударів і передач
+    powerLoss: 0.12, // сила удару
+    miscontrol: 0.12, // шанс поганого прийому мʼяча
+    reactionLag: 0.18, // затримка рішень і реакції (секунди)
+    // Ризик травм: множник = 1 + (injuryRiskMax − 1)·(1 − st/100)^3
+    injuryRiskMax: 5,
+    sprintInjury: 0.00012, // базовий шанс травми під час спринту (перевірка ~3 рази на секунду, лише при st < 40)
+    maxInjuriesPerTeam: 2, // захист від надмірної кількості травм в одному матчі
+    // Витрата сил за матч: частка за час на полі + частка за пробіг і ривки
+    drainTimeShare: 0.45, drainDistShare: 0.55, expectedDist: 1700, sprintDrainMul: 1.6,
+    // Відновлення за медіакоїни: ціна = missing·costPerPoint·(1 + missing/100·costCurve)
+    restoreCostPerPoint: 2, restoreCostCurve: 1.2,
+    states: { excellent: 80, normal: 60, tired: 40, heavy: 20 },
+    lowThreshold: 40, criticalThreshold: 20,
+    aiRestoreBelow: 42, aiRestoreReserve: 5000, aiBenchBelow: 20,
   },
 
   injuries: { minMatches: 1, maxMatches: 5, treatCostPerMatch: 500 },
@@ -53,7 +73,37 @@ export const BALANCE = {
     win: 600, draw: 250, loss: 100, perGoal: 80, cleanSheet: 150, upsetWin: 400, bigWin: 200, hatTrick: 300,
     comebackWin: 250, champion: 10000, top3: 4000, sponsorFallbackMin: 800, sponsorFallbackMax: 2000,
     jackpotMin: 20000, jackpotMax: 30000, marketWindowRounds: 6,
+    // економіка клубів-суперників
+    clubStartTop: 22000, clubStartBottom: 12000, // стартовий бюджет (за посівом)
+    clubSponsorTop: 9000, clubSponsorBottom: 5000, // сезонний спонсорський дохід
+    clubPrize: [10000, 7000, 5000, 4000, 3500, 3000, 2600, 2300, 2000, 1800, 1600, 1500, 1400, 1300, 1200, 1100, 1000, 1000],
+    clubSoftCap: 150000, // понад цю суму дохід клубу-суперника зменшується вдвічі
+    aiDevBudgetShare: 0.25, // частка бюджету, яку суперник може витратити на розвиток за міжсезоння
   },
+
+  development: {
+    perSeason: 2, // максимум +2 загального рейтингу за міжсезоння
+    costs: [9000, 19000], // ціна першого й другого пункту
+    costRatingStep: 0.04, // +4% до ціни за кожен пункт рейтингу понад 85
+    cap: 99,
+    focusBonus: 3, // бонус до обраної характеристики за кожен пункт розвитку
+  },
+
+  market: {
+    rarityValue: { rare: 12000, epic: 26000, legendary: 42000, mythic: 70000, divine: 140000, common: 3000 },
+    starValueMul: 4, // ринкова ціна зірки = ціна джекпоту × множник
+    ratingStep: 0.07, // +7% вартості за кожен пункт рейтингу понад стартовий
+    perGoal: 0.01, perAssist: 0.005, perMotm: 0.02, statCap: 0.3,
+    importanceMul: 1.15, // ключовий гравець коштує дорожче для продавця
+    sellerAskSpread: [1.05, 1.3],
+    counterFrom: 0.82, // від цієї частки ціни клуб робить зустрічну пропозицію
+    maxRounds: 3,
+    rivalChance: 0.55, maxRivals: 3,
+    ownerPreference: 0.04, // наскільки продавець може віддати перевагу іншій пропозиції в межах цієї різниці
+    incomingOffers: [1, 3],
+    aiDealsPerOffseason: 4,
+  },
+
 
   transfers: {
     dropChance: 0.36, // шанс випадіння після матчу
