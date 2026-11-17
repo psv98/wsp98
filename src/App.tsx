@@ -1,12 +1,16 @@
-import { useEffect } from 'react';
-import { Ceremony } from './components/Ceremony';
-import { MatchScreen, PostMatch, PreMatch } from './components/MatchFlow';
+import { Suspense, lazy, useEffect } from 'react';
 import { About, Calendar, ClubSelect, CoinsScreen, History, Hub, Results, SettingsScreen, Stats, TableScreen, Title } from './components/screens';
 import { Squad } from './components/Squad';
 import { Transfers } from './components/Transfers';
 import { Toast } from './components/ui';
 import { audio } from './game/audio';
 import { boot, go, useApp, type Screen } from './game/store';
+
+// Важкі екрани (матч, підсумки, церемонія) завантажуються лише коли потрібні
+const MatchScreen = lazy(() => import('./components/MatchFlow').then((m) => ({ default: m.MatchScreen })));
+const PreMatch = lazy(() => import('./components/MatchFlow').then((m) => ({ default: m.PreMatch })));
+const PostMatch = lazy(() => import('./components/MatchFlow').then((m) => ({ default: m.PostMatch })));
+const Ceremony = lazy(() => import('./components/Ceremony').then((m) => ({ default: m.Ceremony })));
 
 const NEED_SAVE: Screen[] = ['hub', 'squad', 'table', 'calendar', 'results', 'transfers', 'coins', 'stats', 'history', 'prematch', 'match', 'post', 'ceremony'];
 
@@ -48,5 +52,5 @@ export function App() {
     case 'post': view = <PostMatch />; break;
     case 'ceremony': view = <Ceremony />; break;
   }
-  return <div className={`app ${app.settings.lowGfx ? 'lowgfx' : ''}`}>{view}<Toast /></div>;
+  return <div className={`app ${app.settings.lowGfx ? 'lowgfx' : ''}`}><Suspense fallback={<div className="page muted center">Завантаження…</div>}>{view}</Suspense><Toast /></div>;
 }

@@ -1,45 +1,81 @@
-// Компонентна система карток: один шаблон для всіх персонажів, комплектів, зірок і секретних подій.
+// Компонентна система карток на рамках UI kit: одна рамка на рідкісність, увесь текст і логотипи — у DOM поверх неї.
 import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
+import { CLUB_BY_ID } from '../data/clubs';
+import { ROLE_NAMES } from '../data/formations';
 import { RARITY, type Rarity } from '../data/rarity';
 import { BUNDLES, SPECIAL_BY_ID, type SpecialDef } from '../data/specials';
 import { assetUrl } from '../game/assets';
 import { audio } from '../game/audio';
 import { useApp } from '../game/store';
-import { Btn, Coins, Icon, RarityIcon } from './ui';
+import type { PlayerState } from '../systems/types';
+import { Btn, Coins } from './ui';
 
-export function PlayerCard({ sp, isUser = true, compact, className = '', note, footer, showQ = true }: { sp: SpecialDef; isUser?: boolean; compact?: boolean; className?: string; note?: string; footer?: ReactNode; showQ?: boolean }) {
-  const r = RARITY[sp.rarity];
-  const fx = isUser ? sp.user : sp.opp;
+/** Дані будь-якої картки гравця. Нічого з цього не вшито в зображення. */
+export interface CardData {
+  rarity: Rarity;
+  shortName: string;
+  fullName: string;
+  title?: string;
+  role?: string;
+  abilityName?: string;
+  abilities: string[];
+  club?: string; // id клубу, за який грає
+  logo: string; // зображення в круглій зоні
+  status?: string;
+  rating?: number;
+  kindLabel?: string;
+}
+
+export function specialCard(sp: SpecialDef, isUser = true, extra: Partial<CardData> = {}): CardData {
+  return {
+    rarity: sp.rarity, shortName: sp.short, fullName: sp.name, title: sp.title, role: sp.roleName, abilityName: sp.ability, abilities: sp.perks,
+    logo: sp.img, rating: (isUser ? sp.user : sp.opp).q, kindLabel: sp.kind === 'star' ? 'Світова зірка' : RARITY[sp.rarity].name, ...extra,
+  };
+}
+
+export function commonCard(p: PlayerState, clubId: string): CardData {
+  return {
+    rarity: 'common', shortName: `№${p.num}`, fullName: `Гравець №${p.num}`, title: CLUB_BY_ID[clubId].name, role: ROLE_NAMES[p.role], abilities: [],
+    club: clubId, logo: CLUB_BY_ID[clubId].logo, rating: Math.round(p.q), kindLabel: RARITY.common.name,
+  };
+}
+
+export function GameCard({ data, compact, dim, footer, className = '' }: { data: CardData; compact?: boolean; dim?: 'locked' | 'elsewhere'; footer?: ReactNode; className?: string }) {
+  const r = RARITY[data.rarity];
   return (
-    <div className={`pcard ${compact ? 'compact' : ''} ${className}`} style={{ '--rc': r.color } as CSSProperties} data-note={note}>
-      <div className="in" data-note={note}>
-        {showQ && <span className="q">{fx.q}</span>}
-        <div className="rar"><RarityIcon rarity={sp.rarity} size={22} />{sp.kind === 'star' ? 'Світова зірка' : r.name}</div>
-        <div className="port"><img src={assetUrl(sp.img)} alt="" /></div>
-        <div className="pname">{sp.name}</div>
-        <div className="ptitle">«{sp.title}»</div>
-        <div className="prole">{sp.roleName}</div>
-        <div className="pab">{sp.ability}</div>
-        {!compact && <ul>{sp.perks.map((p) => <li key={p}>{p}</li>)}</ul>}
-        {footer}
+    <div className={`gcard ${compact ? 'compact' : ''} ${dim ?? ''} ${className}`} style={{ '--rc': r.color } as CSSProperties} role="group" aria-label={`${data.kindLabel ?? r.name}: ${data.fullName}`}>
+      <div className="gc-frame" style={{ backgroundImage: `url(${assetUrl(r.frame)})` }}>
+        {data.rating != null && <span className="gc-q">{data.rating}</span>}
+        <div className="gc-port"><img src={assetUrl(data.logo)} alt="" loading="lazy" /></div>
+        {data.club && CLUB_BY_ID[data.club].logo !== data.logo && <img className="gc-club" src={assetUrl(CLUB_BY_ID[data.club].logo)} alt="" loading="lazy" />}
+        <div className="gc-plate"><span>{data.shortName}</span></div>
+        <div className="gc-text">
+          <b>{data.fullName}</b>
+          {data.title && <i>«{data.title}»</i>}
+          {data.role && <small>{data.role}</small>}
+          {data.abilityName && <em>{data.abilityName}</em>}
+        </div>
+        {data.status && <span className="gc-status">{data.status}</span>}
       </div>
+      {!compact && data.abilities.length > 0 && <ul className="gc-perks">{data.abilities.map((p) => <li key={p}>{p}</li>)}</ul>}
+      {footer}
     </div>
   );
 }
 
+/** Картка особливого персонажа (ІМІ або світової зірки). */
+export function PlayerCard({ sp, isUser = true, compact, className = '', note, footer, dim }: { sp: SpecialDef; isUser?: boolean; compact?: boolean; className?: string; note?: string; footer?: ReactNode; dim?: 'locked' | 'elsewhere' }) {
+  return <GameCard data={specialCard(sp, isUser, { status: note })} compact={compact} className={className} footer={footer} dim={dim} />;
+}
+
 export function JackpotCard({ amount, sponsor }: { amount: number; sponsor?: boolean }) {
-  return (
-    <div className="pcard jackpot">
-      <div className="in">
-        <div className="rar"><Icon name="coin" size={22} color="#ffd95e" />{sponsor ? 'Трансферна подія' : 'Секретний трансфер'}</div>
-        <div className="port" style={{ display: 'grid', placeItems: 'center', background: 'radial-gradient(circle,#fff3c4,#e9ae1c)' }}><Icon name="coin" size={70} color="#b88212" /></div>
-        <div className="pname">{sponsor ? 'СПОНСОРСЬКИЙ БОНУС' : 'ФІНАНСОВИЙ ДЖЕКПОТ ІМІ'}</div>
-        <div className="ptitle">{sponsor ? 'Партнери підтримали клуб' : '«Трансферний бюджет погоджено!»'}</div>
-        <div className="amount">+{amount.toLocaleString('uk-UA')} MC</div>
-        {!sponsor && <ul><li>Відкрито трансферний ринок світових зірок</li><li>Мессі, Роналду, Неймар, Буффон</li><li>Вікно діє обмежену кількість турів</li></ul>}
-      </div>
-    </div>
-  );
+  const data: CardData = {
+    rarity: sponsor ? 'rare' : 'divine', kindLabel: sponsor ? 'Трансферна подія' : 'Секретний трансфер',
+    shortName: `+${amount.toLocaleString('uk-UA')} MC`, fullName: sponsor ? 'Спонсорський бонус' : 'Фінансовий джекпот ІМІ',
+    title: sponsor ? 'Партнери підтримали клуб' : 'Трансферний бюджет погоджено!', logo: 'assets/ui/branding/imi-round-original.svg',
+    abilities: sponsor ? [] : ['Відкрито трансферний ринок світових зірок', 'Мессі, Роналду, Неймар, Буффон', 'Вікно діє обмежену кількість турів'],
+  };
+  return <GameCard data={data} className="jackpot" />;
 }
 
 export interface ShowItem { special?: string; jackpot?: number; sponsor?: number }
@@ -75,11 +111,11 @@ export function Showcase({ rarity, head, sub, items, isUser, actions, onSkip, dr
     <div className={`reveal ${rarity}`} style={{ '--rc': r.color } as CSSProperties}>
       <div className="spot s1" /><div className="spot s2" />
       <div className="parts">{parts.map((p, i) => <i key={i} style={{ left: p.left, animationDuration: p.dur, animationDelay: p.delay, '--dx': p.dx } as CSSProperties} />)}</div>
-      {onSkip && !done && <div className="skip"><Btn kind="small ghost" onClick={() => setShown(items.length)}>Пропустити ⏭</Btn></div>}
+      {onSkip && !done && <div className="skip"><Btn kind="small silver" onClick={() => setShown(items.length)}>Пропустити ⏭</Btn></div>}
       <div className="head">{head}</div>
       {sub && <div className="sub">{sub}</div>}
-      <div className="stage">
-        {shown < 0 && <div className="back">?</div>}
+      <div className={`stage n${items.length}`}>
+        {shown < 0 && <div className="flip-wait"><div className="gcard"><div className="gc-frame back" style={{ backgroundImage: `url(${assetUrl(r.frame)})` }}><span className="gc-qmark">?</span></div></div></div>}
         {items.map((it, i) => i < Math.max(shown, 0) && (
           <div className="flip" key={i}>
             {it.special ? <PlayerCard sp={SPECIAL_BY_ID[it.special]} isUser={isUser} /> : <JackpotCard amount={it.jackpot ?? it.sponsor ?? 0} sponsor={it.sponsor != null} />}
@@ -103,12 +139,10 @@ export function unitItems(unitId: string): { items: ShowItem[]; rarity: Rarity; 
 
 export function MarketCard({ sp, owned, soldTo, canBuy, onBuy }: { sp: SpecialDef; owned: boolean; soldTo?: string; canBuy: boolean; onBuy: () => void }) {
   return (
-    <PlayerCard sp={sp} footer={
-      <div className="price" style={{ display: 'grid', gap: 6, width: '100%' }}>
-        <div className="center"><Coins n={sp.price ?? 0} /></div>
-        {owned ? <span className="chip green" style={{ justifyContent: 'center' }}>У вашому клубі</span>
-          : soldTo ? <span className="chip red" style={{ justifyContent: 'center' }}>Грає за: {soldTo}</span>
-            : <Btn kind="primary small block" disabled={!canBuy} onClick={onBuy} sound="coin">Придбати</Btn>}
+    <PlayerCard sp={sp} compact note={owned ? 'У вашому клубі' : soldTo ? `Грає за: ${soldTo}` : undefined} footer={
+      <div className="gc-foot">
+        <Coins n={sp.price ?? 0} />
+        {!owned && !soldTo && <Btn kind="primary small block" disabled={!canBuy} onClick={onBuy} sound="coin">Придбати</Btn>}
       </div>} />
   );
 }

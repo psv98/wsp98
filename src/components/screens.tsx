@@ -36,20 +36,19 @@ export function Title() {
   const [reset, setReset] = useState(false);
   return (
     <div className="title" onPointerDown={() => { audio.unlock(); audio.music('menu'); }}>
-      <div className="beam b1" /><div className="beam b2" /><div className="beam b3" />
-      <div className="lamps l">{Array.from({ length: 12 }, (_, i) => <i key={i} />)}</div>
-      <div className="lamps r">{Array.from({ length: 12 }, (_, i) => <i key={i} />)}</div>
+      <div className="beam b1" /><div className="beam b2" />
       <div className="title-inner">
+        <SupercupIcon size={170} className="title-cup" />
         <h1 style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)' }}>БІЛИЙ СУПЕРКУБОК</h1>
         <SupercupLogo />
         <div className="scoreboard">18 медіаклубів. 34 тури. Один чемпіон.</div>
         <div className="title-menu">
           {save && <Btn kind="primary big" onClick={() => go(resumeScreen(save))}>Продовжити сезон</Btn>}
-          <Btn kind={save ? '' : 'primary big'} disabled={!loaded} onClick={() => (save ? setReset(true) : go('select'))}>Почати гру</Btn>
-          <Btn onClick={() => go('settings')}>Налаштування</Btn>
-          <Btn onClick={() => go('about')}>Про гру</Btn>
+          <Btn kind={save ? 'green' : 'primary big'} disabled={!loaded} onClick={() => (save ? setReset(true) : go('select'))}>Почати гру</Btn>
+          <Btn kind="blue" onClick={() => go('settings')}>Налаштування</Btn>
+          <Btn kind="blue" onClick={() => go('about')}>Про гру</Btn>
         </div>
-        {save && <p className="muted" style={{ fontSize: 12 }}>{clubName(save.userClub)} · сезон {save.season}, тур {Math.min(save.round + 1, ROUNDS)} · збережено {fmtTime(save.savedAt)}</p>}
+        {save && <p className="title-save">Збереження: {clubName(save.userClub)} · сезон {save.season}, тур {Math.min(save.round + 1, ROUNDS)} · збережено {fmtTime(save.savedAt)}</p>}
       </div>
       {reset && <ResetFlow onClose={() => setReset(false)} />}
     </div>

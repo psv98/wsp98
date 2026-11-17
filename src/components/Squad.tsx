@@ -1,7 +1,7 @@
 // «Мій склад»: стартові 11 на схемі, запасні, тактика, лікування та відновлення витривалості.
 import { useState, type CSSProperties } from 'react';
 import { BALANCE as B } from '../data/balance';
-import { FORMATIONS, FORMATION_IDS, ROLE_NAMES, ROLE_SHORT } from '../data/formations';
+import { FORMATIONS, FORMATION_IDS, ROLE_SHORT } from '../data/formations';
 import { RARITY } from '../data/rarity';
 import { SPECIAL_BY_ID } from '../data/specials';
 import { assetUrl } from '../game/assets';
@@ -10,7 +10,7 @@ import { act, useApp } from '../game/store';
 import { autoPickLineup, restoreStamina, setFormation, setLineupSlot, treatPlayer } from '../systems/actions';
 import { isAvailable, playerQ, staminaCost, treatCost } from '../systems/squad';
 import type { PlayerState } from '../systems/types';
-import { PlayerCard } from './cards';
+import { GameCard, commonCard, specialCard } from './cards';
 import { Btn, Coins, Modal, StaminaBar, TopBar } from './ui';
 
 export function PlayerRow({ p, clubId, sel, onClick, right, slotLabel }: { p: PlayerState; clubId: string; sel?: boolean; onClick?: () => void; right?: React.ReactNode; slotLabel?: string }) {
@@ -119,7 +119,7 @@ export function Squad() {
       </div>
       {info && (
         <Modal onClose={() => setInfo(null)}>
-          {info.special ? <div style={{ display: 'grid', placeItems: 'center' }}><PlayerCard sp={SPECIAL_BY_ID[info.special]} /></div> : <><h2>{playerName(info)}</h2><p className="muted">{ROLE_NAMES[info.role]} · рейтинг {Math.round(info.q)}</p></>}
+          <div style={{ display: 'grid', placeItems: 'center' }}><GameCard data={info.special ? specialCard(SPECIAL_BY_ID[info.special], true, { club: club.id }) : { ...commonCard(info, club.id), status: info.injured > 0 ? `Травма: ${matchesWord(info.injured)}` : info.suspended > 0 ? `Дискваліфікація: ${matchesWord(info.suspended)}` : undefined }} /></div>
           <div className="hub-stats" style={{ marginTop: 12 }}>
             <div className="stat"><span>Матчі</span><b>{info.s.apps}</b></div><div className="stat"><span>Голи</span><b>{info.s.goals}</b></div><div className="stat"><span>Асисти</span><b>{info.s.assists}</b></div><div className="stat"><span>Витривалість</span><b>{Math.round(info.stamina)}%</b></div>
           </div>

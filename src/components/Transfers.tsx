@@ -35,7 +35,7 @@ export function Transfers() {
             {sorted.map((sp) => {
               const o = owners[sp.id];
               const mine = o === s.userClub;
-              return <PlayerCard key={sp.id} sp={sp} isUser className={mine ? '' : o ? 'elsewhere' : 'locked'} note={o && !mine ? `Грає за: ${clubName(o)}` : undefined} compact={!mine} showQ={mine} />;
+              return <PlayerCard key={sp.id} sp={sp} isUser compact dim={mine ? undefined : o ? 'elsewhere' : 'locked'} note={mine ? 'У вашому клубі' : o ? `Грає за: ${clubName(o)}` : 'Ще не отримано'} />;
             })}
           </div>
         </>)}

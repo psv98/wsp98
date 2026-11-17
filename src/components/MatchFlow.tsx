@@ -104,10 +104,11 @@ export function MatchScreen() {
   const [panel, setPanel] = useState<null | 'subs' | 'tactics' | 'exit' | 'instant' | 'log'>(null);
   const [subOut, setSubOut] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [userPaused, setUserPaused] = useState(false);
   const names: [string, string] = [clubName(fx.home), clubName(fx.away)];
   const colors: [string, string] = [CLUB_BY_ID[fx.home].color, CLUB_BY_ID[fx.away].color];
 
-  useEffect(() => { paused.current = panel != null; }, [panel]);
+  useEffect(() => { paused.current = panel != null || userPaused; }, [panel, userPaused]);
   useEffect(() => { rendRef.current?.setLow(settings.lowGfx); }, [settings.lowGfx]);
 
   useEffect(() => {
@@ -226,6 +227,7 @@ export function MatchScreen() {
       </div>
       <div className="mcanvas" ref={boxRef}>
         <canvas ref={canvasRef} />
+        {userPaused && !panel && !engine.finished && engine.phase !== 'half' && <div className="banner info">Пауза</div>}
         {banner && <div key={banner.key} className={`banner ${tone}`}>{banner.line.text.split('. ')[0]}{banner.line.text.includes('. ') && <small>{banner.line.text.split('. ').slice(1).join('. ')}</small>}</div>}
         {engine.phase === 'var' && engine.pendingVar && (
           <div className="mpanel"><div className="box center">
@@ -281,9 +283,11 @@ export function MatchScreen() {
       <div className="mbar">
         <button type="button" className="mbtn" aria-label="Вийти з матчу" onClick={() => setPanel('exit')}><Icon name="cross" size={18} /></button>
         <div className="ticker ell" onClick={() => setPanel('log')} role="button" tabIndex={0}>{last ? <><b className="gold">{last.min}'</b> <b>{last.line.text}</b></> : 'Матч починається…'}</div>
-        {[1, 2, 4].map((v) => <button type="button" key={v} className={`mbtn ${speed.current === v ? 'on' : ''}`} onClick={() => setSpeed(v)} title={`Швидкість ×${v}`}>×{v}</button>)}
-        <button type="button" className="mbtn" onClick={() => setPanel('subs')} disabled={engine.finished}>Заміни</button>
-        <button type="button" className="mbtn" onClick={() => setPanel('tactics')} disabled={engine.finished}>Тактика</button>
+        <button type="button" className={`mbtn ${userPaused ? 'on' : ''}`} aria-label={userPaused ? 'Продовжити' : 'Пауза'} title={userPaused ? 'Продовжити' : 'Пауза'} disabled={engine.finished} onClick={() => setUserPaused((v) => !v)}><Icon name={userPaused ? 'play' : 'pause'} size={18} /></button>
+        {[1, 2, 4].map((v) => <button type="button" key={v} className={`mbtn spd ${speed.current === v ? 'on' : ''}`} onClick={() => setSpeed(v)} title={`Швидкість ×${v}`}>×{v}</button>)}
+        <button type="button" className={`mbtn spd-cycle ${speed.current > 1 ? 'on' : ''}`} onClick={() => setSpeed(speed.current === 1 ? 2 : speed.current === 2 ? 4 : 1)} aria-label={`Швидкість ×${speed.current}, змінити`}>×{speed.current}</button>
+        <button type="button" className="mbtn txt" onClick={() => setPanel('subs')} disabled={engine.finished}>Заміни</button>
+        <button type="button" className="mbtn txt" onClick={() => setPanel('tactics')} disabled={engine.finished}>Тактика</button>
         <button type="button" className="mbtn" onClick={() => setPanel('instant')} disabled={engine.finished} title="Миттєвий результат">⏭</button>
         <button type="button" className="mbtn" aria-label="На весь екран" onClick={() => { const el = document.documentElement; if (document.fullscreenElement) void document.exitFullscreen(); else void el.requestFullscreen?.().then(() => (screen.orientation as unknown as { lock?: (o: string) => Promise<void> })?.lock?.('landscape').catch(() => undefined)).catch(() => undefined); }}><Icon name="full" size={18} /></button>
       </div>
@@ -353,7 +357,7 @@ export function PostMatch() {
         </div></div>
       )}
       <div className="center">
-        {post.card && !post.cardClaimed ? <Btn kind="primary big" onClick={() => setReveal(true)}>ВІДКРИТИ МЕГАТРАНСФЕР</Btn>
+        {post.card && !post.cardClaimed ? <Btn kind="purple big" onClick={() => setReveal(true)}>ВІДКРИТИ МЕГАТРАНСФЕР</Btn>
           : <Btn kind="primary big" onClick={() => { if (act(ackPostMatch)) go(post.seasonFinished ? 'ceremony' : 'hub'); }}>{post.seasonFinished ? 'До церемонії нагородження' : 'Далі'}</Btn>}
         {!post.card && <p className="muted" style={{ marginTop: 8, fontSize: 12.5 }}>Цього разу мегатрансфер не випав. {s.transfers.pity >= B.transfers.pityMatches - 1 ? 'Після наступного матчу він гарантований!' : ''}</p>}
       </div>

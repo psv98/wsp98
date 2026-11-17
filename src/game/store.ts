@@ -95,7 +95,7 @@ export function startNewGame(clubId: string) {
 
 export function startNextSeason() {
   if (!state.save) return;
-  try { void commit(nextSeason(state.save), { seasonStart: true }); set({ screen: 'hub' }); toast(`Сезон ${state.save.season + 1} розпочато!`); }
+  try { const next = nextSeason(state.save); void commit(next, { seasonStart: true }); set({ screen: 'hub' }); toast(`Сезон ${next.season} розпочато!`); }
   catch (e) { console.error(e); toast('Не вдалося розпочати сезон', 'err'); }
 }
 

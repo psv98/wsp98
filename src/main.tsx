@@ -13,6 +13,7 @@ import './styles/tokens.css';
 import './styles/app.css';
 import './styles/cards.css';
 import './styles/arcade.css';
+import './styles/kit.css';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App';

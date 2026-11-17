@@ -1,28 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Білий суперкубок">
-  <defs>
-    <linearGradient id="sc-w" x1="0" x2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset=".55" stop-color="#F7F7F2"/><stop offset="1" stop-color="#D9DDDF"/></linearGradient>
-    <clipPath id="sc-b"><circle cx="64" cy="108" r="14"/></clipPath>
-  </defs>
-  <!-- ручки -->
-  <path d="M37 20C13 18 12 50 42 53M91 20c24-2 25 30-5 33" fill="none" stroke="#123C30" stroke-width="10" stroke-linecap="round"/>
-  <path d="M37 20C13 18 12 50 42 53M91 20c24-2 25 30-5 33" fill="none" stroke="#D9DDDF" stroke-width="6" stroke-linecap="round"/>
-  <path d="M36 21C17 20 16 46 40 50" fill="none" stroke="#F7F7F2" stroke-width="2.4" stroke-linecap="round"/>
-  <!-- чаша -->
-  <path d="M33 13h62v17c0 20-12 32-31 34-19-2-31-14-31-34z" fill="url(#sc-w)" stroke="#123C30" stroke-width="2.5" stroke-linejoin="round"/>
-  <path d="M43 19c-2 16 2 30 13 38" fill="none" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" opacity=".95"/>
-  <path d="M36 36c8 6 48 6 56 0" fill="none" stroke="#DDBB64" stroke-width="3" stroke-linecap="round"/>
-  <rect x="30" y="9" width="68" height="8" rx="4" fill="#DDBB64" stroke="#123C30" stroke-width="2.5"/>
-  <!-- ніжка та основа -->
-  <path d="M58 63h12l-2 13h-8z" fill="#D9DDDF" stroke="#123C30" stroke-width="2.5" stroke-linejoin="round"/>
-  <ellipse cx="64" cy="66" rx="9" ry="3.6" fill="#DDBB64" stroke="#123C30" stroke-width="2"/>
-  <rect x="47" y="75" width="34" height="7" rx="2.5" fill="#F7F7F2" stroke="#123C30" stroke-width="2.5"/>
-  <rect x="41" y="81" width="46" height="8" rx="3" fill="#DDBB64" stroke="#123C30" stroke-width="2.5"/>
-  <!-- класичний футбольний мʼяч під кубком -->
-  <circle cx="64" cy="108" r="14" fill="#F7F7F2"/>
-  <g clip-path="url(#sc-b)" fill="#123C30" stroke="#123C30" stroke-width="1.6" stroke-linejoin="round">
-    <path d="M64 101.500l6.2 4.5-2.4 7.300h-7.600l-2.4-7.300z"/>
-    <path d="M64 101.500V94M70.2 106l7-2.300M67.8 113.300l4.4 6M60.2 113.300l-4.4 6M57.8 106l-7-2.3" fill="none"/>
-    <path d="M58.5 93.500L64 96l5.5-2.500L68 90h-8zM77 100l1 6 4.5 3.5 3-3.5-2.5-7.500zM73 119l4.5-4.5 5.5.5-2 6-6 3.500zM55 119l-4.5-4.5-5.5.5 2 6 6 3.500zM51 100l-1 6-4.5 3.5-3-3.5 2.5-7.500z"/>
-  </g>
-  <circle cx="64" cy="108" r="14" fill="none" stroke="#123C30" stroke-width="2.5"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="700" viewBox="0 0 600 700"><defs>
+<linearGradient id="silver" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff"/><stop offset=".2" stop-color="#E6EEF1"/><stop offset=".48" stop-color="#A7BEC5"/><stop offset=".68" stop-color="#fff"/><stop offset="1" stop-color="#8299A0"/></linearGradient><linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff0b3"/><stop offset=".25" stop-color="#e3ac22"/><stop offset=".5" stop-color="#fff2be"/><stop offset=".75" stop-color="#a66d0a"/><stop offset="1" stop-color="#f1c95c"/></linearGradient><filter id="sh"><feGaussianBlur in="SourceAlpha" stdDeviation="6"/><feOffset dy="9"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+<g filter="url(#sh)"><path d="M170 180 C68 112 41 213 113 313 C138 345 171 355 204 347 L201 302 C147 320 129 276 129 236 C133 208 151 213 183 247 Z" fill="url(#gold)" stroke="#FFF3CE" stroke-width="6"/><path d="M431 180 C533 112 560 213 488 313 C463 345 430 355 397 347 L400 302 C454 320 472 276 472 236 C468 208 450 213 418 247 Z" fill="url(#gold)" stroke="#FFF3CE" stroke-width="6"/>
+<path d="M169 127 L431 127 L409 335 C399 395 369 426 332 450 L332 532 L387 532 L405 569 L196 569 L213 532 L268 532 L268 450 C231 426 201 395 191 335 Z" fill="url(#silver)" stroke="url(#gold)" stroke-width="11"/>
+<path d="M198 161 L402 161 L385 321 C376 370 342 404 302 425 C262 404 224 368 215 321 Z" fill="none" stroke="#F0C65D" stroke-width="5" opacity=".75"/>
+<path d="M182 129 Q300 90 419 129" fill="none" stroke="url(#gold)" stroke-width="19" stroke-linecap="round"/>
+<path d="M199 563 H402 L425 626 H175 Z" fill="url(#gold)" stroke="#FFF3C4" stroke-width="5"/><path d="M188 624 H412 V661 H188 Z" fill="#083B32" stroke="url(#gold)" stroke-width="10"/>
+<circle cx="301" cy="295" r="65" fill="#073D34" stroke="url(#gold)" stroke-width="9"/><circle cx="301" cy="295" r="53" fill="#F8FAFC"/>
+<path d="M301 266 l24 18 -9 29 h-30 l-9-29 Z M278 256 L261 272 L253 293 L269 316 L282 305 M324 256 L340 272 L347 293 L333 316 L319 305" fill="#13292F"/>
+</g></svg>

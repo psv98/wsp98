@@ -1,6 +1,7 @@
 // Айдентика «Білого суперкубка». Єдине джерело графіки — public/assets/icons/supercup.svg:
 // усі компоненти нижче використовують саме його, графіка ніде не дублюється.
 import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
+import { CLUB_BY_ID } from '../data/clubs';
 import { assetUrl } from '../game/assets';
 import { audio } from '../game/audio';
 import { useApp } from '../game/store';
@@ -65,17 +66,24 @@ export function TrophyRevealAnimation({ onDone }: { onDone: () => void }) {
   );
 }
 
-/** Святковий екран чемпіона. */
-export function VictoryScreen({ club, clubName, season, points, actions }: { club: string; clubName: string; season: number; points: number; actions: ReactNode }) {
+/**
+ * Універсальний екран чемпіона: будь-який із 18 клубів, жодних вшитих назв чи зображень.
+ * Назва, логотип, сезон та очки беруться з даних поточного чемпіонату.
+ */
+export function WinnerScreen({ winnerClub, season, points, isUser, actions }: { winnerClub: string; season: number; points: number; isUser: boolean; actions: ReactNode }) {
+  const def = CLUB_BY_ID[winnerClub];
   useEffect(() => { audio.music('ceremony'); return () => audio.music(null); }, []);
   return (
     <div className="victory">
-      <div className="beam b1" /><div className="beam b2" /><div className="beam b3" />
-      <GoldConfetti />
+      <div className="v-confetti" aria-hidden="true" />
+      <GoldConfetti count={isUser ? 80 : 30} />
       <div className="victory-in">
-        <h1 className="v-title">ВИ — ЧЕМПІОНИ!</h1>
+        <h1 className="v-title">{isUser ? 'ВИ — ЧЕМПІОНИ!' : 'ЧЕМПІОН СЕЗОНУ'}</h1>
         <div className="v-cup"><SupercupIcon size={230} /></div>
-        <div className="v-club"><Logo club={club} size={64} /><div><b>{clubName}</b><span>Сезон {season} · {points} очок</span></div></div>
+        <div className="v-plate">
+          <Logo club={winnerClub} size={72} />
+          <div><b>{def?.name ?? winnerClub}</b><span>Білий суперкубок · сезон {season} · {points} очок</span></div>
+        </div>
         <div className="v-actions">{actions}</div>
       </div>
     </div>
