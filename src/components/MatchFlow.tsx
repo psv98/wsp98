@@ -273,21 +273,25 @@ export function MatchScreen() {
           <div className="mpanel"><div className="box">
             <h2 className="center">Перерва</h2>
             <div className="plates center-plates"><b>{engine.score[0]}</b><i>:</i><b>{engine.score[1]}</b></div>
+            {/* головна дія — одразу під рахунком, щоб її не треба було шукати прокручуванням */}
+            <div className="mp-actions">
+              <Btn kind="primary big" onClick={() => { engine.startSecondHalf(); force((x) => x + 1); }}>Другий тайм ▶</Btn>
+              <div className="mp-sub"><Btn kind="small" onClick={() => setPanel('subs')}>Заміни ({subsLeft})</Btn><Btn kind="small" onClick={() => setPanel('tactics')}>Тактика</Btn></div>
+            </div>
             <StatBlock st={liveStats(engine)} c1={colors[0]} c2={colors[1]} />
-            <div className="row wrap" style={{ justifyContent: 'center', marginTop: 12 }}><Btn onClick={() => setPanel('subs')}>Заміни ({subsLeft})</Btn><Btn onClick={() => setPanel('tactics')}>Тактика</Btn><Btn kind="primary" onClick={() => { engine.startSecondHalf(); force((x) => x + 1); }}>Другий тайм</Btn></div>
           </div></div>
         )}
         {engine.finished && (
           <div className="mpanel"><div className="box">
             <h2 className="center">Фінальний свисток</h2>
             <div className="next" style={{ margin: '10px 0' }}><div className="side"><Logo club={fx.home} size={48} /><b>{names[0]}</b></div><div className="plates"><b>{engine.score[0]}</b><i>:</i><b>{engine.score[1]}</b></div><div className="side"><Logo club={fx.away} size={48} /><b>{names[1]}</b></div></div>
+            <div className="mp-actions"><Btn kind="primary big" disabled={!!busy} onClick={() => void finish()}>{busy ?? 'Підсумки туру ▶'}</Btn></div>
             <StatBlock st={liveStats(engine)} c1={colors[0]} c2={colors[1]} />
-            <div className="center" style={{ marginTop: 12 }}><Btn kind="primary big" disabled={!!busy} onClick={() => void finish()}>{busy ?? 'Підсумки туру'}</Btn></div>
           </div></div>
         )}
         {panel === 'subs' && (
           <div className="mpanel"><div className="box">
-            <h2>Заміни · залишилось {subsLeft}</h2>
+            <div className="mp-head"><h2>Заміни · залишилось {subsLeft}</h2><Btn kind="primary small" onClick={() => { setPanel(null); setSubOut(null); }}>Продовжити ▶</Btn></div>
             <p className="muted" style={{ fontSize: 12.5, margin: '4px 0 8px' }}>Оберіть, кого замінити, а потім — хто вийде. Заміна відбудеться під час найближчої зупинки гри. Вилученого гравця замінити не можна.</p>
             {team.subQueue.length > 0 && <p className="gold" style={{ fontSize: 13 }}>Очікують: {team.subQueue.map((q) => `${team.players.find((p) => p.pid === q.out)?.name} → ${team.players.find((p) => p.pid === q.in)?.name}`).join('; ')}</p>}
             <div className="squad" style={{ gridTemplateColumns: '1fr 1fr', gap: 8 }}>
@@ -299,7 +303,7 @@ export function MatchScreen() {
         )}
         {panel === 'tactics' && (
           <div className="mpanel"><div className="box center">
-            <h2>Тактична схема</h2>
+            <div className="mp-head"><h2>Тактична схема</h2><Btn kind="primary small" onClick={() => { setPanel(null); setSubOut(null); }}>Продовжити ▶</Btn></div>
             <p className="muted" style={{ margin: '6px 0 12px' }}>Зміна діє до кінця цього матчу.</p>
             <div className="row wrap" style={{ justifyContent: 'center' }}>{FORMATION_IDS.map((f: FormationId) => <Btn key={f} kind={team.formation === f ? 'primary' : ''} onClick={() => { engine.setFormation(userTeam, f); force((x) => x + 1); }}>{f}</Btn>)}</div>
             <div style={{ marginTop: 14 }}><Btn kind="primary" onClick={() => setPanel(null)}>Продовжити гру</Btn></div>
@@ -307,7 +311,7 @@ export function MatchScreen() {
         )}
         {panel === 'log' && (
           <div className="mpanel"><div className="box">
-            <h2>Хід матчу</h2>
+            <div className="mp-head"><h2>Хід матчу</h2><Btn kind="primary small" onClick={() => { setPanel(null); setSubOut(null); }}>Продовжити ▶</Btn></div>
             <div className="evlist" style={{ margin: '10px 0' }}>{lines.length === 0 && <p className="muted">Подій ще не було.</p>}{lines.slice().reverse().map((l, i) => <div key={i}><span className="m">{l.min}'</span><span className={l.line.tone === 'goal' ? 'gold' : l.line.tone === 'bad' ? 'bad' : ''}>{l.line.text}</span></div>)}</div>
             <StatBlock st={liveStats(engine)} c1={colors[0]} c2={colors[1]} />
             <div className="center" style={{ marginTop: 12 }}><Btn kind="primary" onClick={() => setPanel(null)}>Продовжити гру</Btn></div>
