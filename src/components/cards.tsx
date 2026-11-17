@@ -112,8 +112,8 @@ export function Showcase({ rarity, head, sub, items, isUser, actions, onSkip, dr
   const hidden = shown < 0;
   return (
     <div className={`reveal ${hidden ? 'hidden-card' : rarity}`} style={{ '--rc': hidden ? '#ffffff' : r.color } as CSSProperties}>
-      <div className="spot s1" /><div className="spot s2" />
-      <div className="parts">{parts.slice(0, partsN).map((p, i) => <i key={i} style={{ left: p.left, animationDuration: p.dur, animationDelay: p.delay, '--dx': p.dx } as CSSProperties} />)}</div>
+      <div className="reveal-bg" aria-hidden="true"><div className="spot s1" /><div className="spot s2" />
+      <div className="parts">{parts.slice(0, partsN).map((p, i) => <i key={i} style={{ left: p.left, animationDuration: p.dur, animationDelay: p.delay, '--dx': p.dx } as CSSProperties} />)}</div></div>
       {onSkip && !done && <div className="skip"><Btn kind="small silver" onClick={() => setShown(items.length)}>Пропустити ⏭</Btn></div>}
       {hidden ? <div className="head">МЕГАТРАНСФЕР</div> : <div className="head" key="h">{head}</div>}
       {!hidden && sub && <div className="sub">{sub}</div>}
