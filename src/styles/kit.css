@@ -494,3 +494,21 @@ input[type='range'] { height: 36px; }
 @media (max-height: 560px) { .reveal { padding-top: calc(8px + var(--safe-t)); gap: 4px; } .reveal .sub { display: none; } .reveal .head { font-size: 22px; } .reveal .skip { top: 4px; } }
 .reveal .gc-perks { width: max(100%, min(300px, 80vw)); align-self: center; font-size: 12.5px; }
 .reveal .stage.n2 .gc-perks, .reveal .stage.n3 .gc-perks { width: 100%; font-size: 11px; }
+
+/* Перерва, фінальний свисток і панелі матчу: головна кнопка вгорі, без прокручування */
+.match { height: 100dvh; }
+.mp-actions { display: flex; flex-direction: column; align-items: center; gap: 2px; margin: 4px 0 10px; }
+.mp-actions .btn.big { --bh: 70px; min-width: min(320px, 90%); font-size: clamp(24px, 6vw, 32px); }
+.mp-sub { display: flex; gap: 4px; justify-content: center; flex-wrap: wrap; }
+.mp-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+.mp-head h2 { margin: 0; font-size: clamp(20px, 5vw, 28px); }
+.mpanel .box h2.center { margin-bottom: 4px; }
+@media (max-width: 640px) {
+  .mpanel { padding: 6px; }
+  .mpanel .box { padding: 10px 6px 6px; }
+  .mpanel .box .statline { grid-template-columns: 30px 1fr 30px; gap: 6px; padding: 1px 0; }
+  .mpanel .box .statline b { font-size: 15px; }
+  .mpanel .box .statline .lbl { font-size: 12px; }
+  .mpanel .box .plates { font-size: 30px; }
+  .mpanel .box .center-plates { margin: 4px auto 6px; }
+}
