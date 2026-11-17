@@ -239,3 +239,100 @@ body { background: var(--bg); }
 @media (prefers-reduced-motion: reduce) { .title-cup, .v-cup, .gc-frame.back { animation: none !important; } }
 .grid > *, .squad > * { min-width: 0; }
 @media (max-width: 400px) { .tbl td, .tbl th { padding-left: 2px; padding-right: 2px; } .tbl .logo { width: 20px !important; height: 20px !important; } }
+
+/* ================= Дизайнерське полірування: ієрархія, читабельність, щільність ================= */
+/* Золота рамка — лише для головних блоків (.hero), модалок і плиток. Звичайні панелі — спокійне «скло». */
+.panel:not(.hero) { border: 1px solid rgba(155, 203, 193, 0.16); border-image: none; border-radius: 6px 20px 6px 20px; padding: 18px 18px 16px; background: linear-gradient(180deg, rgba(11, 59, 54, 0.62), rgba(5, 22, 28, 0.9)); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07), 0 12px 30px rgba(0, 0, 0, 0.35); backdrop-filter: blur(6px); }
+.panel:not(.hero)::before { content: ''; position: absolute; left: 18px; top: -1px; width: 54px; height: 3px; border-radius: 0 0 3px 3px; background: linear-gradient(90deg, var(--gold-hi), var(--gold)); }
+.panel h3 { font-size: 17px; margin-bottom: 14px; }
+.panel.hero { padding: 16px 14px 14px; }
+.stat { border: 1px solid rgba(155, 203, 193, 0.16); border-image: none; border-left: 3px solid var(--gold); border-radius: 4px 14px 4px 14px; padding: 12px 14px; background: linear-gradient(180deg, rgba(11, 59, 54, 0.62), rgba(5, 22, 28, 0.9)); box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3); }
+.stat b { margin-top: 4px; }
+.hub-stats { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+.page.narrow { max-width: 920px; }
+.bignum { font-family: var(--font-num); font-size: clamp(36px, 8vw, 54px); font-weight: 700; line-height: 1.1; }
+.bignum small { font-size: 0.45em; opacity: 0.8; }
+
+/* таблички рахунку — спільні для табло та підсумків */
+.plates { display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-family: var(--font-num); font-size: clamp(38px, 8vw, 56px); font-weight: 800; line-height: 1; }
+.plates b { display: grid; place-items: center; min-width: 1.3em; padding: 4px 10px; background: linear-gradient(180deg, #ffffff, #dfe6e2); color: #041318; border-radius: 7px; box-shadow: 0 0 0 2px var(--gold), 0 6px 14px rgba(0, 0, 0, 0.6); }
+.plates i { font-style: normal; color: var(--gold); font-size: 0.7em; }
+.result .verdict { font-size: clamp(34px, 7vw, 54px); letter-spacing: 0.04em; }
+.result.win .verdict { color: #7df0b6; text-shadow: 0 0 28px rgba(63, 208, 138, 0.55); }
+.result.loss .verdict { color: #ff8b96; }
+.result.draw .verdict { color: var(--gold-hi); }
+.evlist { gap: 6px; font-size: 14px; }
+.evlist .total { border-top: 1px solid var(--line-gold); padding-top: 8px; margin-top: 2px; font-size: 16px; }
+@media (min-width: 860px) { .fx2 { display: grid; grid-template-columns: 1fr 1fr; column-gap: 26px; } .fx2 .fixture:nth-child(2) { border-top: 0; } }
+
+/* статистика матчу: золото проти блакиті — видно за будь-яких клубних кольорів */
+.statline { grid-template-columns: 38px 1fr 38px; gap: 10px; padding: 5px 0; align-items: end; }
+.statline b { font-family: var(--font-num); font-size: 17px; line-height: 1; }
+.statline b:first-child { color: var(--gold-hi); } .statline b:last-child { color: #9fdcff; }
+.statline .lbl { font-family: var(--font-head); font-style: italic; font-weight: 800; font-size: 14px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.statline .bar { height: 8px; border-radius: 4px; gap: 3px; background: none; margin-top: 4px; }
+.statline .bar i { background: linear-gradient(90deg, var(--gold-lo), var(--gold-hi)); border-radius: 4px 1px 1px 4px; min-width: 4px; }
+.statline .bar u { background: linear-gradient(90deg, #7fd0ff, #2f7fc4); border-radius: 1px 4px 4px 1px; min-width: 4px; }
+
+/* перемикачі замість стандартних прапорців */
+.switch input { appearance: none; -webkit-appearance: none; width: 54px; height: 30px; border-radius: 99px; background: rgba(0, 0, 0, 0.55); border: 1px solid rgba(155, 203, 193, 0.35); position: relative; cursor: pointer; flex: none; transition: background var(--t-fast); }
+.switch input::after { content: ''; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #c9d8d2; transition: transform var(--t-fast), background var(--t-fast); }
+.switch input:checked { background: linear-gradient(180deg, var(--gold-hi), var(--gold)); border-color: var(--gold-hi); }
+.switch input:checked::after { transform: translateX(24px); background: #2a1a00; }
+.switch { padding: 12px 0; min-height: 54px; }
+.setrow { grid-template-columns: 170px 1fr 52px; padding: 8px 0; }
+input[type='range'] { height: 36px; }
+
+/* номери турів — компактні фішки */
+.rounds { display: flex; gap: 6px; overflow-x: auto; padding: 4px 2px 10px; scrollbar-width: thin; }
+.rounds button { flex: none; width: 44px; height: 44px; border-radius: 50%; font-family: var(--font-num); font-size: 15px; font-weight: 700; background: rgba(5, 22, 28, 0.85); border: 1px solid rgba(155, 203, 193, 0.25); color: #dfe8e2; }
+.rounds button.on { background: linear-gradient(180deg, var(--gold-hi), var(--gold)); color: #2a1a00; border-color: #fff; box-shadow: 0 0 14px rgba(242, 193, 78, 0.6); }
+.rounds button:disabled { opacity: 0.35; }
+
+/* сповіщення — компактна плашка */
+.toast { border: 1px solid var(--line-gold); border-image: none; border-radius: 99px; padding: 10px 22px; background: rgba(4, 19, 24, 0.94); font-family: var(--font-body); font-style: normal; font-size: 14.5px; font-weight: 600; text-transform: none; letter-spacing: 0; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6); max-width: min(520px, calc(100% - 24px)); }
+.toast.err { filter: none; border-color: #ff8b96; background: rgba(60, 12, 20, 0.96); }
+
+/* склад */
+.squad { align-items: start; }
+.prow { grid-template-columns: 42px minmax(0, 1fr) auto; padding: 8px 12px 8px 10px; }
+.prow .pos { font-family: var(--font-head); font-style: italic; font-weight: 800; font-size: 14px; letter-spacing: 0.05em; color: var(--gold-hi); min-width: 22px; }
+.prow .stam { width: 86px; }
+.prow .q { font-size: 17px; color: #fff; min-width: 26px; text-align: right; }
+.sbar { height: 6px; background: rgba(0, 0, 0, 0.6); }
+.minipitch { border-radius: 10px; border: 2px solid rgba(255, 255, 255, 0.8); box-shadow: inset 0 0 60px rgba(0, 0, 0, 0.35), 0 10px 26px rgba(0, 0, 0, 0.45); background: radial-gradient(circle at 50% 0, transparent 0 13%, rgba(255, 255, 255, 0.7) 13% 13.5%, transparent 13.6%), repeating-linear-gradient(180deg, #2f8f46 0 12.5%, #2a8540 12.5% 25%); }
+.slot .lbl { background: rgba(3, 12, 9, 0.9); border: 1px solid rgba(255, 255, 255, 0.18); padding: 2px 7px; border-radius: 4px; }
+.fixture { padding: 9px 6px; font-size: 14.5px; }
+.fixture.me { background: linear-gradient(90deg, transparent, rgba(242, 193, 78, 0.16), transparent); }
+.tbl td { padding: 9px 4px; } .tbl .pts { color: var(--gold-hi); font-size: 16px; }
+.tbl tbody tr:nth-child(-n + 3) td:first-child { color: var(--gold-hi); font-weight: 800; }
+.chip { background: rgba(4, 19, 24, 0.7); border: 1px solid rgba(155, 203, 193, 0.2); }
+.cardgrid.market { grid-template-columns: repeat(auto-fit, minmax(190px, 230px)); justify-content: center; gap: 18px; }
+.cardgrid.market .gcard { max-width: 230px; }
+.mpanel { backdrop-filter: blur(3px); }
+
+@media (max-width: 640px) {
+  .panel:not(.hero) { padding: 14px 12px 12px; }
+  .hub-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stat.wide { grid-column: 1 / -1; }
+  .topbar .coin { padding: 4px 10px 4px 6px; font-size: 13px; }
+  .topbar h2 { font-size: 20px; }
+  .fixture { font-size: 12.5px; gap: 5px; padding: 8px 2px; }
+  .fixture .logo { width: 22px !important; height: 22px !important; }
+  .fixture .sc { min-width: 46px; padding: 3px 4px; }
+  .setrow { grid-template-columns: 1fr 1.2fr 44px; }
+  .prow .stam { width: 54px; }
+  /* заміни: дві колонки стають однією, імена завжди видно */
+  .mpanel .squad { grid-template-columns: 1fr !important; }
+  .mpanel .prow { grid-template-columns: 44px minmax(0, 1fr) 60px !important; min-height: 48px; }
+  .tbl td.name .ell { max-width: 46vw; display: inline-block; }
+}
+/* панелі поверх матчу: усе вміщується без обрізання кнопки */
+.mpanel { align-items: start; padding: 8px; }
+.mpanel .box { max-height: calc(100% - 4px); margin: auto; }
+.mpanel .box .statline { padding: 2px 0; }
+.mpanel .box .statline .bar { height: 6px; margin-top: 2px; }
+.mpanel .box .plates { font-size: clamp(30px, 6vw, 42px); }
+.mpanel .box .next .logo { width: 40px !important; height: 40px !important; }
+.mpanel .box .next .side b { font-size: clamp(16px, 3vw, 21px); }
+.mpanel .box .btn.big { --bh: 66px; font-size: clamp(22px, 4.4vw, 30px); }

@@ -21,8 +21,8 @@ export function PlayerRow({ p, clubId, sel, onClick, right, slotLabel }: { p: Pl
       <div style={{ minWidth: 0 }}>
         <div className="nm ell" style={sp ? { color: RARITY[sp.rarity].color } : undefined}>{playerName(p)}</div>
         <div className="meta">
-          <span>{slotLabel ? `${slotLabel} · ` : ''}{ROLE_SHORT[p.role]}</span>
-          <span style={{ width: 54 }}><StaminaBar v={p.stamina} /></span><span className="num">{Math.round(p.stamina)}%</span>
+          <span className="pos">{slotLabel ?? ROLE_SHORT[p.role]}</span>
+          <span className="stam"><StaminaBar v={p.stamina} /></span><span className="num">{Math.round(p.stamina)}%</span>
           {p.injured > 0 && <span className="chip red">Травма: {matchesWord(p.injured)}</span>}
           {p.suspended > 0 && <span className="chip red">Дискв.: {matchesWord(p.suspended)}</span>}
           {p.yellows > 0 && <span title="Жовті картки (дискваліфікація після 4)">🟨{p.yellows}</span>}
