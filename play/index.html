@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="uk">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#05120e" />
+    <meta name="description" content="Білий суперкубок — браузерна футбольна аркада та симулятор медіачемпіонату. 18 медіаклубів, 34 тури, один чемпіон." />
+    <link rel="icon" type="image/svg+xml" href="./assets/icons/supercup.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="./assets/icons/supercup-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="./assets/icons/supercup-16.png" />
+    <link rel="apple-touch-icon" href="./assets/icons/icon-192.png" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <title>Білий суперкубок</title>
+    <script>
+      // GitHub Pages у режимі «Deploy from a branch» віддає цей вихідний файл, а не зібрану гру.
+      // У такому разі переходимо до зібраної версії в теці play/ (її оновлює workflow).
+      // У зібраній версії та під час розробки цей перехід не спрацьовує.
+      if (/\.github\.io$/.test(location.hostname) && !/\/play\//.test(location.pathname)) {
+        document.addEventListener('DOMContentLoaded', function () {
+          if (document.querySelector('script[src$="/src/main.tsx"]')) location.replace('./play/' + location.search + location.hash);
+        });
+      }
+    </script>
+    <script type="module" crossorigin src="./assets/index-BlnD3TdK.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-Bhi0Ynlf.css">
+  </head>
+  <body>
+    <div id="root"></div>
+    <noscript>Для гри потрібен JavaScript.</noscript>
+  </body>
+</html>

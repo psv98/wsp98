@@ -11,6 +11,16 @@
     <link rel="apple-touch-icon" href="./assets/icons/icon-192.png" />
     <link rel="manifest" href="./manifest.webmanifest" />
     <title>Білий суперкубок</title>
+    <script>
+      // GitHub Pages у режимі «Deploy from a branch» віддає цей вихідний файл, а не зібрану гру.
+      // У такому разі переходимо до зібраної версії в теці play/ (її оновлює workflow).
+      // У зібраній версії та під час розробки цей перехід не спрацьовує.
+      if (/\.github\.io$/.test(location.hostname) && !/\/play\//.test(location.pathname)) {
+        document.addEventListener('DOMContentLoaded', function () {
+          if (document.querySelector('script[src$="/src/main.tsx"]')) location.replace('./play/' + location.search + location.hash);
+        });
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
